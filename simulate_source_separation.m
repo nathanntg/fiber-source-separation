@@ -18,6 +18,7 @@ output_noise = 0; % either single value (0) or callback that generates noise
 figures = true;
 
 % correlations
+smooth_input = [];
 smooth_mixing = []; % row: nearby inputs influence output; column: nearby outputs influence each other
 
 % TODO: write me
@@ -105,8 +106,6 @@ end
 
 % no convergence?
 if isempty(s_hat)
-    fprintf('WARNING: No convergence using g=skew.\n');
-    
     % perform ICA
     if figures
         [s_hat, m_hat, w_hat] = fastica(x_noisy, 'numOfIC', number_of_inputs);
@@ -116,9 +115,11 @@ if isempty(s_hat)
     
     % give up
     if isempty(s_hat)
-        fprintf('WARNING: No convergence using g=pow3.\n');
+        fprintf('WARNING: No convergence using g=pow3. Giving up.\n');
         scores = 0;
         return;
+    else
+        fprintf('WARNING: No convergence using g=skew. Used g=pow3 instead.\n');
     end
 end
 
