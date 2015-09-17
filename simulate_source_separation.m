@@ -18,6 +18,8 @@ output_noise = 0; % either single value (0) or callback that generates noise
 figures = true;
 
 % correlations
+smooth_mixing = []; % row: nearby inputs influence output; column: nearby outputs influence each other
+
 % TODO: write me
 
 %% LOAD PARAMETERS
@@ -58,7 +60,10 @@ end
 
 %% GENERATE MIXING MATRIX
 m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
-% TODO: add correlations to mixing matrix
+
+if ~isempty(smooth_mixing)
+    m = filter2(smooth_mixing, m);
+end
 
 % show mixing matrix
 if figures
