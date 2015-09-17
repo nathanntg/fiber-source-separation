@@ -59,11 +59,15 @@ if nargout < 1
     figure;
     if is2D
         x = param_b_values;
-        if 1 < min(size(x))
+        if iscell(x)
+            x = 1:length(param_b_values);
+        elseif 1 < min(size(x))
             x = x(:, 1);
         end
         y = param_a_values;
-        if 1 < min(size(y))
+        if iscell(y)
+            y = 1:length(param_a_values);
+        elseif 1 < min(size(y))
             y = y(:, 1);
         end
         imagesc(x, y, output);
