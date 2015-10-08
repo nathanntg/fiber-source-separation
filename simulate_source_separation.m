@@ -141,29 +141,42 @@ end
 sorted_out = idx(sorted_in);
 if figures
     % plot best two
-    subplot(2, 3, 1);
+    subplot(3, 3, 1);
     plot(s(sorted_in(end), 1:200));
     title(sprintf('Source (s_{%d})', sorted_in(end)));
     xlabel('Time'); ylabel('Trace');
-    subplot(2, 3, 2);
+    subplot(3, 3, 2);
     plot(s_noisy(sorted_in(end), 1:200));
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(end)));
     xlabel('Time'); ylabel('Trace');
-    subplot(2, 3, 3);
+    subplot(3, 3, 3);
     plot(s_hat(sorted_out(end), 1:200));
     title(sprintf('Separated Source (s_{%d})', sorted_out(end)));
     xlabel('Time'); ylabel('Trace');
-    subplot(2, 3, 4);
+    subplot(3, 3, 4);
     plot(s(sorted_in(end - 1), 1:200));
     title(sprintf('Source (s_{%d})', sorted_in(end - 1)));
     xlabel('Time'); ylabel('Trace');
-    subplot(2, 3, 5);
+    subplot(3, 3, 5);
     plot(s_noisy(sorted_in(end - 1), 1:200));
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(end - 1)));
     xlabel('Time'); ylabel('Trace');
-    subplot(2, 3, 6);
+    subplot(3, 3, 6);
     plot(s_hat(sorted_out(end - 1), 1:200));
     title(sprintf('Separated Source (s_{%d})', sorted_out(end - 1)));
+    xlabel('Time'); ylabel('Trace');
+    % plot worst
+    subplot(3, 3, 7);
+    plot(s(sorted_in(1), 1:200));
+    title(sprintf('Source (s_{%d})', sorted_in(1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 3, 8);
+    plot(s_noisy(sorted_in(1), 1:200));
+    title(sprintf('Source (s_{%d}) + Noise', sorted_in(1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 3, 9);
+    plot(s_hat(sorted_out(1), 1:200));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
     xlabel('Time'); ylabel('Trace');
 end
 
