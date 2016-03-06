@@ -141,6 +141,7 @@ end
 sorted_out = idx(sorted_in);
 if figures
     % plot best two
+    figure;
     subplot(3, 3, 1);
     plot(s(sorted_in(end), 1:200));
     title(sprintf('Source (s_{%d})', sorted_in(end)));
@@ -178,6 +179,48 @@ if figures
     plot(s_hat(sorted_out(1), 1:200));
     title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
     xlabel('Time'); ylabel('Trace');
+    
+    % plot time courses
+    if number_of_inputs <= 50 && number_of_outputs <= 50
+        % TODO: figure out better order
+        
+        % colors
+        clrs = lines(max(number_of_inputs, number_of_outputs));
+        t = 1:duration;
+        
+        figure;
+        subplot(1, 2, 1);
+        xlim([t(1) t(end)]); ylim([0 number_of_inputs]); xlabel('Time (s)');
+        set(gca,'ytick',[]); title('Original Signals');
+        hold on;
+        ts = bsxfun(@minus, s, min(s, [], 2));
+        ts = bsxfun(@rdivide, ts, max(ts, [], 2));
+        [is, ~] = find(ts > 0.5 & cumsum(ts > 0.5, 2) == 1); % fist entry in each row
+        % because of the way linear indexing works, `is` is in order
+        is = is(end:-1:1);
+        for j = 1:number_of_inputs
+            i = is(j);
+            trace = ts(i, :);
+            hold on; plot(t, j - 1 + trace, 'Color', clrs(j, :));
+        end
+        hold off;
+        
+        subplot(1, 2, 2);
+        xlim([t(1) t(end)]); ylim([0 size(s_hat, 1)]); xlabel('Time (s)');
+        set(gca,'ytick',[]); title('Separated Signals');
+        hold on;
+        ts = bsxfun(@minus, s_hat, min(s, [], 2));
+        ts = bsxfun(@rdivide, ts, max(ts, [], 2));
+        [is, ~] = find(ts > 0.5 & cumsum(ts > 0.5, 2) == 1); % fist entry in each row
+        % because of the way linear indexing works, `is` is in order
+        is = is(end:-1:1);
+        for j = 1:size(s_hat, 1)
+            i = is(j);
+            trace = ts(i, :);
+            hold on; plot(t, j - 1 + trace, 'Color', clrs(j, :));
+        end
+        hold off;
+    end
 end
 
 end
