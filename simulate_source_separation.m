@@ -12,7 +12,7 @@ waveform = exp(0:-0.75:-4); % the waveform measured from each spike
 amplitude = [1 2]; % either single value (all the same amplitude), or range (uniform), or callback
 
 % noise
-input_noise = @(n) normrnd(0, 0.25, 1, n); % either single value (0) or callback that generates noise
+input_noise = @(n) normrnd(0, 0.125, 1, n); % either single value (0) or callback that generates noise
 output_noise = 0; % either single value (0) or callback that generates noise
 
 figures = true;
@@ -187,41 +187,64 @@ if figures
     title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
     xlabel('Time'); ylabel('Trace');
     
+    figure;
+    plot(sort(scores, 'descend'));
+    xlim([1 length(scores)]); ylim([0 1]);
+    title('Scores');
+    ylabel('r');
+    xlabel('Number of signals');
+    
     % plot time courses
-    if number_of_inputs <= 50 && number_of_outputs <= 50
+    if number_of_outputs <= 100
         % TODO: figure out better order
+        
+        % get best matches
+        idx_in = [];
+        idx_out = 1:size(s_hat, 1);
+        for i = idx_out
+            [~, j] = max(rho(:, i));
+            idx_in = [idx_in j];
+        end
         
         % colors
         clrs = lines(max(number_of_inputs, number_of_outputs));
         t = 1:duration;
         
         figure;
-        subplot(1, 2, 1);
-        xlim([t(1) t(end)]); ylim([0 number_of_inputs]); xlabel('Time (s)');
-        set(gca,'ytick',[]); title('Original Signals');
-        hold on;
-        ts = bsxfun(@minus, s, min(s, [], 2));
+        
+        % get traces
+        ss = s_noisy(idx_in, :);
+        ts = bsxfun(@minus, ss, min(ss, [], 2));
         ts = bsxfun(@rdivide, ts, max(ts, [], 2));
         [is, ~] = find(ts > 0.5 & cumsum(ts > 0.5, 2) == 1); % fist entry in each row
         % because of the way linear indexing works, `is` is in order
         is = is(end:-1:1);
-        for j = 1:number_of_inputs
+        % actually plot
+        subplot(1, 2, 1);
+        hold on;
+        xlim([t(1) t(end)]); ylim([0 size(ss, 1)]); xlabel('Time (s)');
+        set(gca,'ytick',[]); title('Original Signals');
+        for j = 1:size(ss, 1)
             i = is(j);
+            %i = j;
             trace = ts(i, :);
             hold on; plot(t, j - 1 + trace, 'Color', clrs(j, :));
         end
         hold off;
         
+        % get traces
+        ss = s_hat(idx_out, :);
+        ts = bsxfun(@minus, ss, min(ss, [], 2));
+        ts = bsxfun(@rdivide, ts, max(ts, [], 2));
+        %[is, ~] = find(ts > 0.5 & cumsum(ts > 0.5, 2) == 1); % fist entry in each row
+        % because of the way linear indexing works, `is` is in order
+        %is = is(end:-1:1);
+        %actually plot
         subplot(1, 2, 2);
-        xlim([t(1) t(end)]); ylim([0 size(s_hat, 1)]); xlabel('Time (s)');
+        xlim([t(1) t(end)]); ylim([0 size(ss, 1)]); xlabel('Time (s)');
         set(gca,'ytick',[]); title('Separated Signals');
         hold on;
-        ts = bsxfun(@minus, s_hat, min(s, [], 2));
-        ts = bsxfun(@rdivide, ts, max(ts, [], 2));
-        [is, ~] = find(ts > 0.5 & cumsum(ts > 0.5, 2) == 1); % fist entry in each row
-        % because of the way linear indexing works, `is` is in order
-        is = is(end:-1:1);
-        for j = 1:size(s_hat, 1)
+        for j = 1:size(ss, 1)
             i = is(j);
             trace = ts(i, :);
             hold on; plot(t, j - 1 + trace, 'Color', clrs(j, :));
