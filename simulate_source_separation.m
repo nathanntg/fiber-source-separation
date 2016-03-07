@@ -21,6 +21,9 @@ figures = true;
 smooth_input = [];
 smooth_mixing = []; % row: nearby inputs influence output; column: nearby outputs influence each other
 
+% mixing
+realistic = false;
+
 % TODO: write me
 
 %% LOAD PARAMETERS
@@ -34,6 +37,27 @@ for i = 1:2:nparams
         error('Invalid parameter: %s.', nm);
     end
     eval([nm ' = varargin{i+1};']);
+end
+
+%% GENERATE MIXING MATRIX
+if realistic
+    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, 'figures', false);
+else
+    m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
+end
+
+if ~isempty(smooth_mixing)
+    m = filter2(smooth_mixing, m);
+end
+
+% show mixing matrix
+if figures
+    figure;
+    imagesc(m);
+    title('Mixing Matrix');
+    xlabel('Inputs');
+    ylabel('Outputs');
+    colorbar;
 end
 
 %% GENERATE INPUT
@@ -57,23 +81,6 @@ if figures
     plot(s_noisy(3, 1:200));
     xlabel('Time');
     ylabel('Trace (s_3)');
-end
-
-%% GENERATE MIXING MATRIX
-m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
-
-if ~isempty(smooth_mixing)
-    m = filter2(smooth_mixing, m);
-end
-
-% show mixing matrix
-if figures
-    figure;
-    imagesc(m);
-    title('Mixing Matrix');
-    xlabel('Inputs');
-    ylabel('Outputs');
-    colorbar;
 end
 
 %% GENERATE OUTPUTS
