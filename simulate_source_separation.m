@@ -24,6 +24,9 @@ smooth_mixing = []; % row: nearby inputs influence output; column: nearby output
 % mixing
 realistic = false;
 
+% ICA
+g = 'skew';
+
 % TODO: write me
 
 %% LOAD PARAMETERS
@@ -106,9 +109,9 @@ end
 %% PERFORM SOURCE SEPARATION
 % perform ICA
 if figures
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', 'skew', 'numOfIC', number_of_inputs);
+    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
 else
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', 'skew', 'numOfIC', number_of_inputs);
+    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
 end
 
 % no convergence?

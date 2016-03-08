@@ -32,6 +32,7 @@ fiber_half_angle_of_acceptance = 17.5;
 
 % show figures
 figures = true;
+stats = true;
 
 %% LOAD PARAMETERS
 nparams=length(varargin);
@@ -102,12 +103,15 @@ m = m(:, any(m > 0, 1));
 num_inputs = size(m, 2);
 
 %% SUMMARY
-    
-well = 0.1;
-fprintf('Number of cells seen: %d\n', num_inputs);
-fprintf('Number of cells seen well: %d\n', sum(max(m, [], 1) > well));
-fprintf('Cells seen by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1));
-fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > well, 1) > 1));
+
+if stats
+    well = 0.1;
+    fprintf('Number of cells seen: %d\n', num_inputs);
+    fprintf('Number of cells seen well: %d\n', sum(max(m, [], 1) > well));
+    fprintf('Cells seen by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1));
+    fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > well, 1) > 1));
+    fprintf('Condition number: %f\n', cond(m));
+end
 
 if figures
     figure;
