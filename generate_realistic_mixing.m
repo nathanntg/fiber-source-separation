@@ -27,8 +27,11 @@ fiber_distribution = [125 0 0; 0 125 0; 0 0 15];
 angle_distribution = [5 0; 0 5];
 
 % fiber width
-fiber_width = 8;
+fiber_diameter = 8;
 fiber_half_angle_of_acceptance = 17.5;
+
+% core diameter
+core_diameter = 2 * sqrt(0.4 * (fiber_diameter / 2) ^ 2);
 
 % show figures
 figures = true;
@@ -47,6 +50,9 @@ for i = 1:2:nparams
     eval([nm ' = varargin{i+1};']);
 end
 
+if isscalar(fiber_distribution)
+    fiber_distribution = [1 0 0; 0 1 0; 0 0 0.12] * fiber_distribution;
+end
 
 %% GENERATE SPACE
 
@@ -56,13 +62,22 @@ num_cells = round(prod(volume) * cell_density * viral_efficacy);
 % cells are uniformly located throughout the space
 cells = bsxfun(@times, rand(3, num_cells), volume);
 
+% sanity check fiber count
+fibers_1sd = num_fibers * 0.682; % number of fibers in 1 standard deviation
+fiber_area_1sd = fibers_1sd * pi * (fiber_diameter / 2) ^ 2; % area of all the fibers
+area_1sd = pi * fiber_distribution(1, 1) * fiber_distribution(2, 2); % only handles independent bivariate
+circle_packing = 0.9069;
+if fiber_area_1sd > (circle_packing * area_1sd)
+    warning('Based on circle packing and the fiber density, the maximum number of fibers is %d.', round((circle_packing * area_1sd) / (pi * (fiber_diameter / 2) ^ 2)));
+end
+
 % fibers are dsitributed with a multivariate normal distribution
 % assume targeted to centers
 fibers = mvnrnd(volume ./ 2, fiber_distribution, num_fibers)';
 fiber_angles = deg2rad(mvnrnd([0, 0], angle_distribution, num_fibers))';
 
 % slope of light cone
-cone_radius = fiber_width / 2;
+cone_radius = core_diameter / 2;
 cone_slope = tan(deg2rad(fiber_half_angle_of_acceptance));
 
 % make scatter histogram
@@ -109,7 +124,7 @@ if stats
     fprintf('Number of cells seen: %d\n', num_inputs);
     fprintf('Number of cells seen well: %d\n', sum(max(m, [], 1) > well));
     fprintf('Cells seen by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1));
-    fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > well, 1) > 1));
+    fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1 & max(m, [], 1) > well));
     fprintf('Condition number: %f\n', cond(m));
 end
 
@@ -121,6 +136,20 @@ if figures
     figure;
     hist(m(:), 100);
     title('Distribution of weights');
+    
+    figure;
+    c = jet(256);
+    scatter3(cells_rel(1, :), cells_rel(2, :), cells_rel(3, :), 50, c(round(1 + mat2gray(idx .* strength) .* 210 + idx .* 24), :), 'filled');
+    [x, y, z] = cylinder([cone_radius; cone_radius + 60 * cone_slope]);
+    hold on;
+    o = surf(x, y, z * 60);
+    alpha(o, 0.1);
+    hold off;
+    set(gca,'ZDir','reverse');
+    xlim([-50 50]);
+    ylim([-50 50]);
+    zlim([-25 75]);
+    xlabel('{\mu}m'); ylabel('{\mu}m'); zlabel('{\mu}m');
 end
 
 end
