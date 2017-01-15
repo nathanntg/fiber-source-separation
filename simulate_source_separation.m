@@ -44,7 +44,7 @@ end
 
 %% GENERATE MIXING MATRIX
 if realistic
-    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, 'figures', false);
+    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, 'figures', false, 'stats', false);
 else
     m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
 end
