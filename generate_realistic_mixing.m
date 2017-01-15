@@ -28,7 +28,7 @@ angle_distribution = [5 0; 0 5];
 
 % fiber width
 fiber_diameter = 8;
-fiber_half_angle_of_acceptance = 17.5;
+fiber_half_angle_of_acceptance = 16.2;
 
 % core diameter
 core_diameter = 2 * sqrt(0.4 * (fiber_diameter / 2) ^ 2);
