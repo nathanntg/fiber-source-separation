@@ -1,4 +1,4 @@
-function output = explore(params, param_a_name, param_a_values, param_b_name, param_b_values, iterations)
+function output = explore(params, param_a_name, param_a_values, param_b_name, param_b_values, iterations, detailed)
 
 % params
 if isempty(params)
@@ -7,7 +7,7 @@ end
 params = [params {'figures', false}];
 
 % defaults
-if nargin < 6
+if ~exist('iterations', 'var') || isempty(iterations)
     iterations = 10;
 end
 if nargin < 4 || isempty(param_b_name)
@@ -16,8 +16,15 @@ if nargin < 4 || isempty(param_b_name)
 else
     is2D = true;
 end
+if ~exist('detailed', 'var') || isempty(detailed)
+    detailed = false;
+end
 
-output = zeros(length(param_a_values), length(param_b_values));
+if detailed
+    output = cell(length(param_a_values), length(param_b_values));
+else
+    output = zeros(length(param_a_values), length(param_b_values), iterations);
+end
 
 % progress
 cnt = 0;
@@ -42,11 +49,17 @@ for idx_a = 1:length(param_a_values)
         % run number of iterations
         for i = 1:iterations
             scores = simulate_source_separation(p{:});
-            values(i) = mean(scores);
+            if detailed
+                output{idx_a, idx_b, i} = scores;
+            else
+                values(i) = mean(scores);
+            end
         end
         
         % store output
-        output(idx_a, idx_b) = mean(values);
+        if ~detailed
+            output(idx_a, idx_b) = mean(values);
+        end
         
         % print progress
         cnt = cnt + 1;
@@ -55,7 +68,7 @@ for idx_a = 1:length(param_a_values)
 end
 
 % plot figure
-if nargout < 1
+if nargout < 1 && ~detailed
     figure;
     if is2D
         x = param_b_values;
