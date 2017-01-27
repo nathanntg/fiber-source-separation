@@ -20,13 +20,11 @@
 #include <string.h>
 #include <time.h>
 
-#define pi 3.1415926535897932f
 #define C_VACUUM 2.9979e11f
 #define TRUE 1
 #define FALSE 0
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define FP_DIV_ERR  1e-8f
-#define absf(x) ((x)>0? (x) : -(x))
 
 /* MACRO TO CONVERT 3D INDEX TO LINEAR INDEX. */
 #define mult2linear(i,j,k,a1,a3)  (((k)-Izmin)*nIxy+((j)-Iymin)*nIx+((i)-Ixmin)+a3*nIxyz+a1*nIxyza3)
@@ -150,7 +148,7 @@ int main( int argc, char *argv[] )
     /* Calculate number of gates, taking into account floating point division errors. */
     nTstep_float = (maxT-minT)/stepT;
     nTstep_int   = (int)(nTstep_float);
-    stepT_r      = absf(nTstep_float - nTstep_int) * stepT;
+    stepT_r      = fabs(nTstep_float - nTstep_int) * stepT;
     stepT_too_small = FP_DIV_ERR * stepT;
     if(stepT_r < stepT_too_small)
         nTstep = nTstep_int;
@@ -346,8 +344,8 @@ int main( int argc, char *argv[] )
 
 	rnm = (REAL)rand()/RAND_MAX;
 	rnm2 = (REAL)rand()/RAND_MAX;
-	c1 = sqrtf(-2.f*logf(rnm)) * cosf(2.f * 3.14159f * rnm2);
-	c2 = sqrtf(-2.f*logf(rnm)) * sinf(2.f * 3.14159f * rnm2);
+	c1 = sqrtf(-2.f * logf(rnm)) * cosf(2.f * M_PI * rnm2);
+	c2 = sqrtf(-2.f * logf(rnm)) * sinf(2.f * M_PI * rnm2);
 	c3 = 10.f;
 
 	/* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
@@ -451,7 +449,7 @@ int main( int argc, char *argv[] )
                 gg = tg[tissueIndex];
 
                 rnm = (REAL)rand()/RAND_MAX; /*ran( &idum, &ncall );*/
-                phi=2.0f*pi*rnm;
+                phi=2.0f * M_PI * rnm;
                 cphi=cosf(phi);
                 sphi=sinf(phi);
 
@@ -464,7 +462,7 @@ int main( int argc, char *argv[] )
                     stheta=sinf(theta);
                     ctheta=foo;
                 }else{  /*if g is exactly zero, then use isotropic scattering angle*/
-                    theta=2.0f*pi*rnm;
+                    theta=2.0f * M_PI * rnm;
                     stheta=sinf(theta);
                     ctheta=cosf(theta);
                 }
