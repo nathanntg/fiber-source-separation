@@ -43,3 +43,8 @@ close all;
 explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', [{[]} generate_smoothing(3:2:9, 3:2:9, @(n, m) fspecial('disk', (n - 1) / 2))]);
 print(gcf, 'smoothing-disk-square.png', '-dpng', '-r300');
 close all;
+
+%% SCENARIO 7: realistic output/duration
+explore({'realistic', true}, 'number_of_outputs', 100:100:1200, 'duration', 1000:1000:15000, 3);
+print(gcf, 'input-duration.png', '-dpng', '-r300');
+close all;
