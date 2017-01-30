@@ -5,13 +5,12 @@
 * Copyright (C) 2002-2008,  David Boas    (dboas <at> nmr.mgh.harvard.edu)      *
 *               2008        Jay Dubb      (jdubb <at> nmr.mgh.harvard.edu)      *
 *               2008        Qianqian Fang (fangq <at> nmr.mgh.harvard.edu)      *
+*               2017        L. Nathan Perkins (lnp <at> bu.edu)                 *
 *                                                                               *
 * License:  4-clause BSD License, see LICENSE for details                       *
 *                                                                               *
 * Example:                                                                      *
-*         tMCimg input.inp                                                      *
-*                                                                               *
-* Please find more details in README and doc/HELP                               *
+*         tMCimgLOT input                                                       *
 ********************************************************************************/
 
 #include <stdio.h>
@@ -25,6 +24,9 @@
 #define FALSE 0
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define FP_DIV_ERR  1e-8f
+
+/* MACRO FOR RANDOM 0 to 1 FLOAT */
+#define RANDF() ((REAL)rand() / RAND_MAX)
 
 /* MACRO TO CONVERT 3D INDEX TO LINEAR INDEX. */
 #define mult2linear(i,j,k,a1,a3)  (((k)-Izmin)*nIxy+((j)-Iymin)*nIx+((i)-Ixmin)+a3*nIxyz+a1*nIxyza3)
@@ -59,61 +61,60 @@ void tmc_assert(int ret, const char *fname, const int linenum);
 int main(int argc, char *argv[])
 {
     int i, j, k, ii, jj, a1, a3;
-    int N;                        /* NUMBER OF PHOTONS RUN SO FAR */
-    int NT;                       /* TOTAL NUMBER OF PHOTONS TO RUN */
-    int Ntissue;                  /* NUMBER OF TISSUE TYPES DESCRIBED IN THE IMAGE FILE */
+    int N; /* NUMBER OF PHOTONS RUN SO FAR */
+    int NT; /* TOTAL NUMBER OF PHOTONS TO RUN */
+    int Ntissue; /* NUMBER OF TISSUE TYPES DESCRIBED IN THE IMAGE FILE */
     
-    REAL foo, foo2;                   /* TEMPORARY VARIABLES */
+    REAL foo, foo2; /* TEMPORARY VARIABLES */
     REAL ffoo;
     
-    char ***tissueType;              /* STORE THE IMAGE FILE */
+    char ***tissueType; /* STORE THE IMAGE FILE */
     short tissueIndex;
-    int nxstep, nystep, nzstep;                   /* DIMENSIONS OF THE IMAGE FILE */
-    REAL xstep, ystep, zstep, rxstep, rystep, rzstep, minstepsize;      /* VOXEL DIMENSIONS */
+    int nxstep, nystep, nzstep; /* DIMENSIONS OF THE IMAGE FILE */
+    REAL xstep, ystep, zstep, rxstep, rystep, rzstep, minstepsize; /* VOXEL DIMENSIONS */
     int nA1step, nA3step;
     
-    REAL tmus[MAX_TISS_NUM], tmua[MAX_TISS_NUM];  /* OPTICAL PROPERTIES OF THE DIFFERENT TISSUE TYPES */
+    REAL tmus[MAX_TISS_NUM], tmua[MAX_TISS_NUM]; /* OPTICAL PROPERTIES OF THE DIFFERENT TISSUE TYPES */
     REAL tg[MAX_TISS_NUM],   tn[MAX_TISS_NUM];
     
-    REAL x,y,z;                 /* CURRENT PHOTON POSITION */
-    REAL xi, yi, zi;            /* INITIAL POSITION OF THE PHOTON */
+    REAL x,y,z; /* CURRENT PHOTON POSITION */
+    REAL xi, yi, zi; /* INITIAL POSITION OF THE PHOTON */
     
     REAL gg, phi, theta, sphi, cphi, stheta, ctheta; /* SCATTERING ANGLES */
-    REAL c1,c2,c3;              /* DIRECTION COSINES */
-    REAL c1o, c2o, c3o;         /* OLD DIRECTION COSINES */
-    REAL cxi, cyi, czi;         /* INITIAL DIRECTION COSINES */
+    REAL c1,c2,c3; /* DIRECTION COSINES */
+    REAL c1o, c2o, c3o; /* OLD DIRECTION COSINES */
+    REAL cxi, cyi, czi; /* INITIAL DIRECTION COSINES */
     
-    REAL *II, IIout[2];             /* FOR STORING THE 2-PT FLUENCE, IIout is for outside the II range */
+    REAL *II, IIout[2]; /* FOR STORING THE 2-PT FLUENCE, IIout is for outside the II range */
     
-    int Ixmin, Ixmax, Iymin, Iymax, Izmin, Izmax;   /* MIN AND MAX X,Y,Z FOR STORING THE */
-    int nIxstep, nIystep, nIzstep;                  /*   2-PT FLUENCE */
+    int Ixmin, Ixmax, Iymin, Iymax, Izmin, Izmax; /* MIN and MAX X,Y,Z FOR STORING THE 2-PT FLUENCE */
+    int nIxstep, nIystep, nIzstep;
     int nIxyz,nIxy,nIx, nIxyza3, nIxyza13;
     
-    REAL minT, maxT;            /* MIN AND MAX TIME FOR SAMPLING THE 2-PT FLUENCE */
-    REAL stepT, stepL;          /* TIME STEP AND CORRESPONDING LENGTH STEP FOR SAMPLING
-                                 THE 2-PT FLUENCE */
-    REAL stepT_r, stepT_too_small;   /* STEPT_R REMAINDER GATE WIDTH */
+    REAL minT, maxT; /* MIN AND MAX TIME FOR SAMPLING THE 2-PT FLUENCE */
+    REAL stepT, stepL; /* TIME STEP AND CORRESPONDING LENGTH STEP FOR SAMPLING THE 2-PT FLUENCE */
+    REAL stepT_r, stepT_too_small; /* STEPT_R REMAINDER GATE WIDTH */
     
     REAL Lresid, Ltot, Lmin, Lmax, Lnext, step, nTstep_float;
     int nTstep, nTstep_int, tindex;
     
-    int nDets;                    /* SPECIFY NUMBER OF DETECTORS*/
-    REAL detRad;                 /* SPECIFY DETECTOR RADIUS */
-    int **detLoc;                 /*    AND X,Y,Z LOCATIONS */
-    REAL **detPos;                 /*    AND X,Y,Z LOCATIONS */
+    int nDets; /* SPECIFY NUMBER OF DETECTORS*/
+    REAL detRad; /* SPECIFY DETECTOR RADIUS */
+    int **detLoc; /* and DETECTOR X,Y,Z LOCATIONS */
+    REAL **detPos; /* and DETECTOR X,Y,Z LOCATIONS */
     
     
-    REAL P2pt;                  /* PHOTON WEIGHT */
+    REAL P2pt; /* PHOTON WEIGHT */
     
-    REAL lenTiss[MAX_TISS_NUM];  /* THE LENGTH SPENT IN EACH TISSUE TYPE BY THE CURRENT PHOTON */
+    REAL lenTiss[MAX_TISS_NUM]; /* THE LENGTH SPENT IN EACH TISSUE TYPE BY THE CURRENT PHOTON */
 #ifdef MOMENTUM_TRANSFER
-    REAL momTiss[MAX_TISS_NUM];  /* THE LENGTH SPENT IN EACH TISSUE TYPE BY THE CURRENT PHOTON */
+    REAL momTiss[MAX_TISS_NUM];
 #endif
-    REAL rnm,rnm2;                   /* RANDOM NUMBER */
+    REAL rnm, rnm2; /* RANDOM NUMBER */
     
-    FILE *fp;                     /* FILE POINTERS FOR SAVING THE DATA */
-    char filenm[MAX_FILE_PATH];      /* FILE NAME FOR DATA FILE */
-    char segFile[MAX_FILE_PATH];     /* FILE NAME FOR IMAGE FILE */
+    FILE *fp; /* FILE POINTERS FOR SAVING THE DATA */
+    char filenm[MAX_FILE_PATH]; /* FILE NAME FOR DATA FILE */
+    char segFile[MAX_FILE_PATH]; /* FILE NAME FOR IMAGE FILE */
     
     int sizeof_lenTissArray;
 #ifdef MOMENTUM_TRANSFER
@@ -150,12 +151,12 @@ int main(int argc, char *argv[])
     nTstep_int   = (int)(nTstep_float);
     stepT_r      = fabs(nTstep_float - nTstep_int) * stepT;
     stepT_too_small = FP_DIV_ERR * stepT;
-    if(stepT_r < stepT_too_small)
+    if (stepT_r < stepT_too_small)
         nTstep = nTstep_int;
     else
         nTstep = ceil(nTstep_float);
     
-    ASSERT(fscanf( fp, "%s", segFile )!=1);                        /* FILE CONTAINING TISSUE STRUCTURE */
+    ASSERT(fscanf(fp, "%s", segFile) != 1);                        /* FILE CONTAINING TISSUE STRUCTURE */
     
     /* READ IMAGE DIMENSIONS */
     ASSERT(fscanf(fp, READ_REAL_INT_INT_INT, &xstep, &nxstep, &Ixmin, &Ixmax) != 4);
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
     nIystep = Iymax - Iymin + 1;
     nIzstep = Izmax - Izmin + 1;
     
-    minstepsize=MIN(xstep, MIN(ystep, zstep));  /*get the minimum dimension*/
+    minstepsize = MIN(xstep, MIN(ystep, zstep));  /*get the minimum dimension*/
     rxstep = 1.f / xstep;
     rystep = 1.f / ystep;
     rzstep = 1.f / zstep;
@@ -175,14 +176,14 @@ int main(int argc, char *argv[])
     if (idum != 0) {
         srand(abs(idum));
     } else {
-        idum=time(NULL);
+        idum = time(NULL);
         srand(idum);
     }
     
     /* READ NUMBER OF TISSUE TYPES AND THEIR OPTICAL PROPERTIES */
     ASSERT(fscanf(fp, "%d", &Ntissue) != 1);
     tmus[0] = -999.f; tmua[0] = -999.f; tg[0] = -999.f; tn[0] = -999.f;
-    for( i=1; i<=Ntissue; i++ ) {
+    for (i = 1; i <= Ntissue; ++i) {
 #ifdef SINGLE_PREC
         ASSERT(fscanf(fp, "%f %f %f %f", &tmus[i], &tg[i], &tmua[i], &tn[i]) != 4);
 #else
@@ -192,8 +193,8 @@ int main(int argc, char *argv[])
             printf("WARNING: The code does not yet support n != 1.0\n");
         }
         if (fabs(tmus[i]) < EPS) {
-            printf( "ERROR: The code does support mus = 0.0\n" );
-            return(0);
+            printf("ERROR: The code does support mus = 0.0\n");
+            exit(1);
         }
     }
     
@@ -203,15 +204,15 @@ int main(int argc, char *argv[])
 #else
     ASSERT(fscanf(fp, "%d %lf", &nDets, &detRad) != 2);
 #endif
-    detLoc = (int **)malloc(nDets * sizeof(int*));
-    detPos = (REAL **)malloc(nDets * sizeof(REAL*));
+    detLoc = (int **)malloc(nDets * sizeof(int *));
+    detPos = (REAL **)malloc(nDets * sizeof(REAL *));
     
-    for( i=0; i<nDets; i++ ){
+    for (i = 0; i < nDets; ++i){
         detLoc[i] = (int *)malloc(3 * sizeof(int));
         detPos[i] = (REAL *)malloc(3 * sizeof(REAL));
     }
-    for( i=0; i<nDets; i++ ) {
-        ASSERT(fscanf(fp, READ_THREE_REALS, detPos[i], detPos[i]+1, detPos[i]+2) != 3);
+    for (i = 0; i < nDets; ++i) {
+        ASSERT(fscanf(fp, READ_THREE_REALS, detPos[i], detPos[i] + 1, detPos[i] + 2) != 3);
         detLoc[i][0] = (int)(detPos[i][0] * rxstep) - 1;
         detLoc[i][1] = (int)(detPos[i][1] * rystep) - 1;
         detLoc[i][2] = (int)(detPos[i][2] * rzstep) - 1;
@@ -221,7 +222,7 @@ int main(int argc, char *argv[])
     
     
     /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
-    foo = sqrtf(cxi*cxi + cyi*cyi + czi*czi);  /*foo is the input */
+    foo = sqrtf(cxi * cxi + cyi * cyi + czi * czi);  /*foo is the input */
     cxi /= foo;
     cyi /= foo;
     czi /= foo;
@@ -240,11 +241,11 @@ int main(int argc, char *argv[])
         printf("ERROR: The binary image file %s was not found!\n", segFile);
         exit(1);
     }
-    tissueType = (char ***)malloc(nxstep*sizeof(char **));
+    tissueType = (char ***)malloc(nxstep * sizeof(char **));
     for (i = 0; i < nxstep; ++i) {
-        tissueType[i] = (char **)malloc(nystep*sizeof(char *));
+        tissueType[i] = (char **)malloc(nystep * sizeof(char *));
         for (j = 0; j < nystep; ++j) {
-            tissueType[i][j] = (char *)malloc(nzstep*sizeof(char));
+            tissueType[i][j] = (char *)malloc(nzstep * sizeof(char));
         }
     }
     for (k = 0; k < nzstep; ++k) {
@@ -258,22 +259,22 @@ int main(int argc, char *argv[])
     fclose(fp);
     
     
-    nIxyz=nIzstep*nIxstep*nIystep;
-    nIxy=nIxstep*nIystep;
+    nIxyz=nIzstep * nIxstep * nIystep;
+    nIxy=nIxstep * nIystep;
     nIx = nIxstep;
     nIxyza3 = nIxyz * nA3step;
     nIxyza13 = nIxyz * nA1step * nA3step;
     
     /* ALLOCATE SPACE FOR AND INITIALIZE THE PHOTON FLUENCE TO 0 */
-    II = (REAL *)malloc(nIxyza13*nTstep*sizeof(REAL));
-    memset((void*)II,0,nIxyza13*nTstep*sizeof(REAL));
+    II = (REAL *)malloc(nIxyza13 * nTstep * sizeof(REAL));
+    memset((void*)II, 0, nIxyza13 * nTstep * sizeof(REAL));
     IIout[0] = 0.f;
     IIout[1] = 0.f;
     
     /* MAKE SURE THE SOURCE IS AT AN INTERFACE */
-    i = DIST2VOX(xi,rxstep);
-    j = DIST2VOX(yi,rystep);
-    k = DIST2VOX(zi,rzstep);
+    i = DIST2VOX(xi, rxstep);
+    j = DIST2VOX(yi, rystep);
+    k = DIST2VOX(zi, rzstep);
     /* REMOVED IN tMCimgLOT
      tissueIndex=tissueType[i][j][k];
      while( tissueIndex!=0 && i>0 && i<nxstep && j>0 && j<nystep &&
@@ -297,17 +298,16 @@ int main(int argc, char *argv[])
      }
      */
     
-    
     /* NUMBER PHOTONS EXECUTED SO FAR */
     N = 0;
     
     /* OPEN A FILE POINTER TO SAVE THE HISTORY INFORMATION */
-    sprintf( filenm, "%s.his", argv[1] );
-    fp = fopen( filenm, "wb" );
+    sprintf(filenm, "%s.his", argv[1]);
+    fp = fopen(filenm, "wb");
     
-    sizeof_lenTissArray = sizeof(REAL)*(Ntissue+1);
+    sizeof_lenTissArray = sizeof(REAL) * (Ntissue + 1);
 #ifdef MOMENTUM_TRANSFER
-    sizeof_momTissArray = sizeof(REAL)*(Ntissue+1);
+    sizeof_momTissArray = sizeof(REAL) * (Ntissue + 1);
 #endif
     /*********************************************************
      START MIGRATING THE PHOTONS
@@ -331,6 +331,7 @@ int main(int argc, char *argv[])
 #ifdef MOMENTUM_TRANSFER
         memset((void*)momTiss, 0, sizeof_momTissArray);
 #endif
+        
         /* INITIAL SOURCE POSITION */
         x = xi;
         y = yi;
@@ -344,8 +345,8 @@ int main(int argc, char *argv[])
          c1 = cosf( rnm ) * sqrtf( 1.f - c3 );
          c2 = sinf( rnm ) * sqrtf( 1.f - c3 );*/
         
-        rnm = (REAL)rand()/RAND_MAX;
-        rnm2 = (REAL)rand()/RAND_MAX;
+        rnm = RANDF();
+        rnm2 = RANDF();
         c1 = sqrtf(-2.f * logf(rnm)) * cosf(2.f * M_PI * rnm2);
         c2 = sqrtf(-2.f * logf(rnm)) * sinf(2.f * M_PI * rnm2);
         c3 = 10.f;
@@ -363,29 +364,37 @@ int main(int argc, char *argv[])
         c3o = c3;
         
         /* PROPAGATE THE PHOTON */
-        i = DIST2VOX(x,rxstep);
-        j = DIST2VOX(y,rystep);
-        k = DIST2VOX(z,rzstep);
+        i = DIST2VOX(x, rxstep);
+        j = DIST2VOX(y, rystep);
+        k = DIST2VOX(z, rzstep);
         
-        a3 = (int)roundf( (float)nA3step * (c3+1.f)/2.f - 0.5f );
-        if( a3==nA3step ) {a3 = nA3step - 1;} else if( a3<0 ) {a3=0;}
+        a3 = (int)roundf((float)nA3step * (c3 + 1.f) / 2.f - 0.5f);
+        if (a3 == nA3step) {
+            a3 = nA3step - 1;
+        } else if (a3 < 0) {
+            a3 = 0;
+        }
         
-        foo2 = atan2f( c2, c1 );
-        if( foo2<0.f ) foo2 += 2.f * 3.14159f;
-        a1 = (int) roundf( (float)nA1step * foo2 / (2.f * 3.14159f) - 0.5f);
-        if( a1==nA1step ) a1 = nA1step - 1;
-        if( a1<0 ) {printf("a1<0 : %d %.2f\n", a1, foo2); a1=0;}
+        foo2 = atan2f(c2, c1);
+        if (foo2 < 0.f) foo2 += 2.f * M_PI;
+        a1 = (int)roundf((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
+        if (a1 == nA1step) {
+            a1 = nA1step - 1;
+        } else if (a1 < 0) {
+            printf("a1<0 : %d %.2f\n", a1, foo2);
+            a1 = 0;
+        }
         
         /* LOOP UNTIL TIME EXCEEDS GATE OR PHOTON ESCAPES */
         //        while ( Ltot<Lmax && i>=0 && i<nxstep && j>=0 && j<nystep && k>=0 && k<nzstep && (tissueIndex=tissueType[i][j][k])!=0 ) {
         while (Ltot < Lmax && k >= 1) {
             tissueIndex = 1;
             if (i >= 0 && i < nxstep && j >= 0 && j < nystep && k >= 0 && k < nzstep) {
-                tissueIndex=tissueType[i][j][k];
+                tissueIndex = tissueType[i][j][k];
             }
             
             /* CALCULATE SCATTERING LENGTH */
-            rnm = (REAL)rand()/RAND_MAX; /*ran( &idum, &ncall );*/
+            rnm = RANDF(); /*ran( &idum, &ncall );*/
             if (rnm > EPS)
                 Lresid = -logf(rnm);
             else
@@ -396,12 +405,12 @@ int main(int argc, char *argv[])
             while (Ltot < Lmax && Lresid > 0.f && k >= 1) {
                 tissueIndex = 1;
                 if (i >= 0 && i < nxstep && j >= 0 && j < nystep && k >= 0 && k < nzstep) {
-                    tissueIndex=tissueType[i][j][k];
+                    tissueIndex = tissueType[i][j][k];
                 }
                 
                 
                 if (Ltot > Lnext && Ltot > Lmin) {
-                    tindex = (int)((Ltot-Lmin)/stepL);
+                    tindex = (int)((Ltot - Lmin) / stepL);
                     if (i >= Ixmin && i <= Ixmax && j >= Iymin && j <= Iymax && k >= Izmin && k <= Izmax && tindex < nTstep) {
 #ifdef DEBUG
                         /*
@@ -409,7 +418,7 @@ int main(int argc, char *argv[])
                          i, j, k, N, x, y, z, P2pt, c1, c2, c3);
                          */
 #endif
-                        II[mult2linear(i,j,k,a1,a3)] += P2pt;
+                        II[mult2linear(i, j, k, a1, a3)] += P2pt;
                     } else {
                         IIout[0] += P2pt;
                     }
@@ -419,9 +428,9 @@ int main(int argc, char *argv[])
                 /*if scattering length is likely within a voxel, i.e. jump inside one voxel*/
                 if ((foo = tmus[tissueIndex]) * minstepsize > Lresid) {
                     step = Lresid / foo;
-                    x += c1*step;
-                    y += c2*step;
-                    z += c3*step;
+                    x += c1 * step;
+                    y += c2 * step;
+                    z += c3 * step;
                     Ltot += step;
                     
                     P2pt *= exp(-tmua[tissueIndex] * step);
@@ -429,20 +438,20 @@ int main(int argc, char *argv[])
                     lenTiss[tissueIndex] += (REAL)step;
                     Lresid = 0.f;
                 } else {   /*if scattering length is bigger than a voxel, then move 1 voxel*/
-                    x += c1*minstepsize;
-                    y += c2*minstepsize;
-                    z += c3*minstepsize;
+                    x += c1 * minstepsize;
+                    y += c2 * minstepsize;
+                    z += c3 * minstepsize;
                     Ltot += minstepsize;
                     
-                    P2pt *= exp(-tmua[tissueIndex]*minstepsize);
+                    P2pt *= exp(-tmua[tissueIndex] * minstepsize);
                     
-                    Lresid -= foo*minstepsize;
+                    Lresid -= foo * minstepsize;
                     lenTiss[tissueIndex] += minstepsize;
                 }
                 
-                i = DIST2VOX(x,rxstep);
-                j = DIST2VOX(y,rystep);
-                k = DIST2VOX(z,rzstep);
+                i = DIST2VOX(x, rxstep);
+                j = DIST2VOX(y, rystep);
+                k = DIST2VOX(z, rzstep);
                 
             } /* PROPAGATE PHOTON */
             
@@ -450,35 +459,35 @@ int main(int argc, char *argv[])
                 /* CALCULATE THE NEW SCATTERING ANGLE USING HENYEY-GREENSTEIN */
                 gg = tg[tissueIndex];
                 
-                rnm = (REAL)rand()/RAND_MAX; /*ran( &idum, &ncall );*/
+                rnm = RANDF(); /*ran( &idum, &ncall );*/
                 phi=2.0f * M_PI * rnm;
                 cphi=cosf(phi);
                 sphi=sinf(phi);
                 
-                rnm = (REAL)rand()/RAND_MAX; /*ran( &idum, &ncall );*/
+                rnm = RANDF(); /*ran( &idum, &ncall );*/
                 if (gg > EPS) {
-                    foo = (1.f - gg*gg)/(1.f - gg + 2.f*gg*rnm);
+                    foo = (1.f - gg * gg) / (1.f - gg + 2.f * gg * rnm);
                     foo = foo * foo;
-                    foo = (1.f + gg*gg - foo)/(2.f*gg);
-                    theta=acosf(foo);
-                    stheta=sinf(theta);
-                    ctheta=foo;
-                } else{  /*if g is exactly zero, then use isotropic scattering angle*/
-                    theta=2.0f * M_PI * rnm;
-                    stheta=sinf(theta);
-                    ctheta=cosf(theta);
+                    foo = (1.f + gg * gg - foo) / (2.f * gg);
+                    theta = acosf(foo);
+                    stheta = sinf(theta);
+                    ctheta = foo;
+                } else {  /*if g is exactly zero, then use isotropic scattering angle*/
+                    theta = 2.0f * M_PI * rnm;
+                    stheta = sinf(theta);
+                    ctheta = cosf(theta);
                 }
 #ifdef MOMENTUM_TRANSFER
                 if(theta > 0.f)
-                    momTiss[tissueIndex] += 1.f-ctheta;
+                    momTiss[tissueIndex] += 1.f - ctheta;
 #endif
                 c1o = c1;
                 c2o = c2;
                 c3o = c3;
                 if (c3 < 1.f && c3 > -1.f) {
-                    c1 = stheta*(c1o*c3o*cphi - c2o*sphi)/sqrtf(1.f - c3o*c3o) + c1o*ctheta;
-                    c2 = stheta*(c2o*c3o*cphi + c1o*sphi)/sqrtf(1.f - c3o*c3o) + c2o*ctheta;
-                    c3 = -stheta*cphi*sqrtf(1-c3o*c3o)+c3o*ctheta;
+                    c1 = stheta * (c1o * c3o * cphi - c2o * sphi) / sqrtf(1.f - c3o * c3o) + c1o * ctheta;
+                    c2 = stheta * (c2o * c3o * cphi + c1o * sphi) / sqrtf(1.f - c3o * c3o) + c2o * ctheta;
+                    c3 = -stheta * cphi * sqrtf(1 - c3o * c3o) + c3o * ctheta;
                 } else {
                     c1 = stheta*cphi;
                     c2 = stheta*sphi;
@@ -486,27 +495,35 @@ int main(int argc, char *argv[])
                 }
                 
                 /* INDEX OF PHOTON DIRECTION */
-                a3 = (int)roundf( (float)nA3step * (c3+1.f)/2.f - 0.5f );
-                if( a3==nA3step )  {a3 = nA3step - 1;} else if( a3<0 ) {a3=0;}
+                a3 = (int)roundf((float)nA3step * (c3 + 1.f) / 2.f - 0.5f );
+                if (a3 == nA3step) {
+                    a3 = nA3step - 1;
+                } else if (a3 < 0) {
+                    a3 = 0;
+                }
                 
                 foo2 = atan2f( c2, c1 );
-                if( foo2<0.f ) foo2 += 2.f * 3.14159f;
-                a1 = (int) roundf( (float)nA1step * foo2 / (2.f * 3.14159f) - 0.5f);
-                if( a1==nA1step ) a1 = nA1step - 1;
-                if( a1<0 ) {printf("a1<0 : %d %.2f\n", a1, foo2); a1=0;}
+                if (foo2 < 0.f) foo2 += 2.f * M_PI;
+                a1 = (int)roundf((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
+                if (a1 == nA1step) {
+                    a1 = nA1step - 1;
+                } else if (a1 < 0) {
+                    printf("a1<0 : %d %.2f\n", a1, foo2);
+                    a1 = 0;
+                }
                 
             } /* LOOP UNTIL END OF SINGLE PHOTON */
         }
         
         /* SCORE EXITING PHOTON AND SAVE HISTORY FILES*/
-        i = DIST2VOX(x,rxstep);
-        j = DIST2VOX(y,rystep);
-        k = DIST2VOX(z,rzstep);
+        i = DIST2VOX(x, rxstep);
+        j = DIST2VOX(y, rystep);
+        k = DIST2VOX(z, rzstep);
         
         if (i >= 0 && i < nxstep && j >= 0 && j < nystep && k >= 0 && k < nzstep) {
-            tissueIndex=tissueType[i][j][k];
+            tissueIndex = tissueType[i][j][k];
             if (tissueIndex == 0) {
-                tindex = (int)((Ltot-Lmin)/stepL);
+                tindex = (int)((Ltot - Lmin) / stepL);
                 if (i >= Ixmin && i <= Ixmax && j >= Iymin && j <= Iymax && k >= Izmin && k <= Izmax && tindex < nTstep) {
 #ifdef DEBUG
                     /*
@@ -527,11 +544,11 @@ int main(int argc, char *argv[])
                                 ffoo = ii;
                                 fwrite( &ffoo, sizeof(REAL), 1, fp );
                                 for (jj = 1; jj <= Ntissue; ++jj) {
-                                    fwrite( &lenTiss[jj], sizeof(REAL), 1, fp );
+                                    fwrite(&lenTiss[jj], sizeof(REAL), 1, fp );
                                 }
 #ifdef MOMENTUM_TRANSFER
                                 for (jj = 1; jj <= Ntissue; ++jj) {
-                                    fwrite( &momTiss[jj], sizeof(REAL), 1, fp );
+                                    fwrite(&momTiss[jj], sizeof(REAL), 1, fp );
                                 }
 #endif
                             }
