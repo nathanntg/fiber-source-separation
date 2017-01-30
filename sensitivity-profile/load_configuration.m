@@ -7,6 +7,23 @@ config = struct();
 % load input file
 fid = fopen(fn);
 
+% supported versions
+supported_versions = [1];
+
+% load file version
+c = textscan(fid, '%d\n', 1);
+if size(c, 1) ~= 1
+    fclose(fid);
+    error('Unexpected version number')
+end
+config.version = double(c{1});
+
+% check supported version
+if ~ismember(config.version, supported_versions)
+    fclose(fid);
+    error('Unsupported version: %d', config.version);
+end
+
 % load number of photons
 c = textscan(fid, '%d\n', 1);
 if size(c, 1) ~= 1
@@ -38,6 +55,14 @@ if size(c, 1) ~= 1
     error('Unexpected initial direction');
 end
 config.initial_direction = c{1};
+
+% load numerical aperture
+c = textscan(fid, '%f\n', 1);
+if size(c, 1) ~= 1
+    fclose(fid);
+    error('Unexpected numerical aperture');
+end
+config.initial_na = c{1};
 
 % load time steps
 c = textscan(fid, '%f %f %f\n', 1);

@@ -19,6 +19,8 @@
 #include <string.h>
 #include <time.h>
 
+#define INPUT_VERSION 1
+
 #define C_VACUUM 2.9979e11f
 #define TRUE 1
 #define FALSE 0
@@ -54,14 +56,21 @@ typedef double REAL;
 #define MAX_TISS_NUM  100
 #define ASSERT(exp) tmc_assert(exp,__FILE__,__LINE__);
 
-int idum;       /* SEED FOR RANDOM NUMBER GENERATOR - A LARGE NEGATIVE NUMBER IS REQUIRED */
+int idum; /* SEED FOR RANDOM NUMBER GENERATOR - A LARGE NEGATIVE NUMBER IS REQUIRED */
 void tmc_error(int id, const char *msg, const char *fname, const int linenum);
 void tmc_assert(int ret, const char *fname, const int linenum);
+
+#ifdef ANGLE_FROM_NA
+void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna);
+static int fiberNA(REAL NA, REAL sinth);
+#endif
 
 #define MAX_FILE_PATH 1024
 
 int main(int argc, char *argv[])
 {
+    int version;
+    
     int i, j, k, ii, jj, a1, a3;
     int N; /* NUMBER OF PHOTONS RUN SO FAR */
     int NT; /* TOTAL NUMBER OF PHOTONS TO RUN */
@@ -85,10 +94,9 @@ int main(int argc, char *argv[])
     REAL gg, phi, theta, sphi, cphi, stheta, ctheta; /* SCATTERING ANGLES */
     REAL c1,c2,c3; /* DIRECTION COSINES */
     REAL c1o, c2o, c3o; /* OLD DIRECTION COSINES */
+    REAL cxi, cyi, czi; /* INITIAL DIRECTION COSINES */
 #ifdef ANGLE_FROM_NA
     REAL cna; /* NUMERICAL APERTURE FOR CALCULATING ANGLE */
-#else
-    REAL cxi, cyi, czi; /* INITIAL DIRECTION COSINES */
 #endif
     
     REAL *II, IIout[2]; /* FOR STORING THE 2-PT FLUENCE, IIout is for outside the II range */
@@ -116,11 +124,7 @@ int main(int argc, char *argv[])
 #ifdef MOMENTUM_TRANSFER
     REAL momTiss[MAX_TISS_NUM];
 #endif
-#ifdef ANGLE_FROM_NA
-    REAL rnm, rnm2; /* RANDOM NUMBER */
-#else
     REAL rnm; /* RANDOM NUMBER */
-#endif
     
     FILE *fp; /* FILE POINTERS FOR SAVING THE DATA */
     char filenm[MAX_FILE_PATH]; /* FILE NAME FOR DATA FILE */
@@ -149,21 +153,29 @@ int main(int argc, char *argv[])
     }
     
     /* READ THE INPUT FILE */
+    ASSERT(fscanf(fp, "%d", &version) != 1); /* INPUT VERSION FORMAT */
+    
+    // check version
+    if (version != INPUT_VERSION) {
+        printf("Unexpected input file version (%d). Expected %d.\n", version, INPUT_VERSION);
+        fclose(fp);
+        exit(1);
+    }
+    
     ASSERT(fscanf(fp, "%d", &NT) != 1); /* TOTAL NUMBER OF PHOTONS */
     ASSERT(fscanf(fp, "%d", &idum) != 1); /* RANDOM NUMBER SEED */
     ASSERT(fscanf(fp, READ_THREE_REALS, &xi, &yi, &zi) != 3); /* INITIAL POSITION OF PHOTON */
+    ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3); /* INITIAL DIRECTION OF PHOTON */
 #ifdef ANGLE_FROM_NA
     ASSERT(fscanf(fp, READ_ONE_REAL, &cna) != 1); /* NUMERICAL APERTURE OF PHOTON */
-#else
-    ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3); /* INITIAL DIRECTION OF PHOTON */
 #endif
     ASSERT(fscanf(fp, READ_THREE_REALS, &minT, &maxT, &stepT) != 3); /* MIN, MAX, STEP TIME FOR RECORDING */
     ASSERT(fscanf(fp, "%d %d", &nA1step, &nA3step) != 2); /* NUMBER OF ANGULAR STEPS FOR II */
     
     /* Calculate number of gates, taking into account floating point division errors. */
-    nTstep_float = (maxT-minT)/stepT;
-    nTstep_int   = (int)(nTstep_float);
-    stepT_r      = fabs(nTstep_float - nTstep_int) * stepT;
+    nTstep_float = (maxT - minT) / stepT;
+    nTstep_int = (int)(nTstep_float);
+    stepT_r = fabs(nTstep_float - nTstep_int) * stepT;
     stepT_too_small = FP_DIV_ERR * stepT;
     if (stepT_r < stepT_too_small)
         nTstep = nTstep_int;
@@ -234,13 +246,11 @@ int main(int argc, char *argv[])
     
     fclose(fp);
     
-#ifndef ANGLE_FROM_NA
     /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
-    foo = sqrtf(cxi * cxi + cyi * cyi + czi * czi);  /*foo is the input */
+    foo = sqrt(cxi * cxi + cyi * cyi + czi * czi);  /*foo is the input */
     cxi /= foo;
     cyi /= foo;
     czi /= foo;
-#endif
     
     /* CALCULATE THE MIN AND MAX PHOTON LENGTH FROM THE MIN AND MAX PROPAGATION TIMES */
     Lmax = maxT * C_VACUUM / tn[1];
@@ -273,8 +283,8 @@ int main(int argc, char *argv[])
     fclose(fp);
     
     
-    nIxyz=nIzstep * nIxstep * nIystep;
-    nIxy=nIxstep * nIystep;
+    nIxyz = nIzstep * nIxstep * nIystep;
+    nIxy = nIxstep * nIystep;
     nIx = nIxstep;
     nIxyza3 = nIxyz * nA3step;
     nIxyza13 = nIxyz * nA1step * nA3step;
@@ -301,6 +311,7 @@ int main(int argc, char *argv[])
 #ifdef MOMENTUM_TRANSFER
     sizeof_momTissArray = sizeof(REAL) * (Ntissue + 1);
 #endif
+    
     /*********************************************************
      START MIGRATING THE PHOTONS
      GENERATING PHOTONS UNTIL NUMBER OF PHOTONS EXECUTED
@@ -329,24 +340,23 @@ int main(int argc, char *argv[])
         y = yi;
         z = zi;
         
-#ifdef ANGLE_FROM_NA
-        /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
-        rnm = RANDF();
-        rnm2 = RANDF();
-        c1 = sqrtf(-2.f * logf(rnm)) * cosf(2.f * M_PI * rnm2);
-        c2 = sqrtf(-2.f * logf(rnm)) * sinf(2.f * M_PI * rnm2);
-        c3 = 10.f;
-        
-        /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
-        foo = sqrtf(c1 * c1 + c2 * c2 + c3 * c3); /*foo is the input */
-        c1 /= foo;
-        c2 /= foo;
-        c3 /= foo;
-#else
         /* INITIAL DIRECTION OF PHOTON */
         c1 = cxi;
         c2 = cyi;
         c3 = czi;
+        
+#ifdef ANGLE_FROM_NA
+        if (cna > 0) {
+            /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
+            tmc_perturb_angle(&c1, &c2, &c3, cna);
+            
+            /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
+            // probably no longer needed, perturb seems to preserve the direction
+            foo = sqrt(c1 * c1 + c2 * c2 + c3 * c3); /*foo is the input */
+            c1 /= foo;
+            c2 /= foo;
+            c3 /= foo;
+        }
 #endif
         
         c1o = c1;
@@ -358,7 +368,7 @@ int main(int argc, char *argv[])
         j = DIST2VOX(y, rystep);
         k = DIST2VOX(z, rzstep);
         
-        a3 = (int)roundf((float)nA3step * (c3 + 1.f) / 2.f - 0.5f);
+        a3 = (int)round((float)nA3step * (c3 + 1.f) / 2.f - 0.5f);
         if (a3 == nA3step) {
             a3 = nA3step - 1;
         } else if (a3 < 0) {
@@ -367,7 +377,7 @@ int main(int argc, char *argv[])
         
         foo2 = atan2f(c2, c1);
         if (foo2 < 0.f) foo2 += 2.f * M_PI;
-        a1 = (int)roundf((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
+        a1 = (int)round((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
         if (a1 == nA1step) {
             a1 = nA1step - 1;
         } else if (a1 < 0) {
@@ -386,9 +396,9 @@ int main(int argc, char *argv[])
             /* CALCULATE SCATTERING LENGTH */
             rnm = RANDF(); /*ran( &idum, &ncall );*/
             if (rnm > EPS)
-                Lresid = -logf(rnm);
+                Lresid = -log(rnm);
             else
-                Lresid = -logf(EPS);
+                Lresid = -log(EPS);
             
             /* PROPAGATE THE PHOTON */
             //            while( Ltot<Lmax && Lresid>0. && i>=0 && i<nxstep && j>=0 && j<nystep && k>=0 && k<nzstep && (tissueIndex=tissueType[i][j][k])!=0 ) {
@@ -451,33 +461,33 @@ int main(int argc, char *argv[])
                 
                 rnm = RANDF(); /*ran( &idum, &ncall );*/
                 phi=2.0f * M_PI * rnm;
-                cphi=cosf(phi);
-                sphi=sinf(phi);
+                cphi=cos(phi);
+                sphi=sin(phi);
                 
                 rnm = RANDF(); /*ran( &idum, &ncall );*/
                 if (gg > EPS) {
                     foo = (1.f - gg * gg) / (1.f - gg + 2.f * gg * rnm);
                     foo = foo * foo;
                     foo = (1.f + gg * gg - foo) / (2.f * gg);
-                    theta = acosf(foo);
-                    stheta = sinf(theta);
+                    theta = acos(foo);
+                    stheta = sin(theta);
                     ctheta = foo;
                 } else {  /*if g is exactly zero, then use isotropic scattering angle*/
                     theta = 2.0f * M_PI * rnm;
-                    stheta = sinf(theta);
-                    ctheta = cosf(theta);
+                    stheta = sin(theta);
+                    ctheta = cos(theta);
                 }
 #ifdef MOMENTUM_TRANSFER
-                if(theta > 0.f)
+                if (theta > 0.f)
                     momTiss[tissueIndex] += 1.f - ctheta;
 #endif
                 c1o = c1;
                 c2o = c2;
                 c3o = c3;
                 if (c3 < 1.f && c3 > -1.f) {
-                    c1 = stheta * (c1o * c3o * cphi - c2o * sphi) / sqrtf(1.f - c3o * c3o) + c1o * ctheta;
-                    c2 = stheta * (c2o * c3o * cphi + c1o * sphi) / sqrtf(1.f - c3o * c3o) + c2o * ctheta;
-                    c3 = -stheta * cphi * sqrtf(1 - c3o * c3o) + c3o * ctheta;
+                    c1 = stheta * (c1o * c3o * cphi - c2o * sphi) / sqrt(1.f - c3o * c3o) + c1o * ctheta;
+                    c2 = stheta * (c2o * c3o * cphi + c1o * sphi) / sqrt(1.f - c3o * c3o) + c2o * ctheta;
+                    c3 = -stheta * cphi * sqrt(1 - c3o * c3o) + c3o * ctheta;
                 } else {
                     c1 = stheta*cphi;
                     c2 = stheta*sphi;
@@ -485,16 +495,16 @@ int main(int argc, char *argv[])
                 }
                 
                 /* INDEX OF PHOTON DIRECTION */
-                a3 = (int)roundf((float)nA3step * (c3 + 1.f) / 2.f - 0.5f );
+                a3 = (int)round((float)nA3step * (c3 + 1.f) / 2.f - 0.5f );
                 if (a3 == nA3step) {
                     a3 = nA3step - 1;
                 } else if (a3 < 0) {
                     a3 = 0;
                 }
                 
-                foo2 = atan2f( c2, c1 );
+                foo2 = atan2(c2, c1);
                 if (foo2 < 0.f) foo2 += 2.f * M_PI;
-                a1 = (int)roundf((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
+                a1 = (int)round((float)nA1step * foo2 / (2.f * M_PI) - 0.5f);
                 if (a1 == nA1step) {
                     a1 = nA1step - 1;
                 } else if (a1 < 0) {
@@ -605,6 +615,74 @@ int main(int argc, char *argv[])
     
     return 0;
 }
+
+#ifdef ANGLE_FROM_NA
+/* 
+ * BASED ON ORIGINAL: http://www.nmr.mgh.harvard.edu/DOT/resources/tmcimg/ but there
+ * is probably a better way to calculate the following.
+ */
+void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna) {
+    REAL th0, dth;
+    REAL ph0, dph;
+    REAL p1, p2, p3;
+    
+    /* Original input direction characterized as a pair of rotation matrices characterized by two angles */
+    
+    th0 = acos(*cz);
+    ph0 = atan2(*cy, *cx);
+    
+    /* Perturbation d\Omega to the propagation direction */
+    
+    dph = 2.f * M_PI * RANDF();
+    
+    do {
+        dth = 2 * RANDF() - 1;
+    } while (fiberNA(cna, dth) != 1);
+    
+    /* Convert to sin */
+    dth = asin(dth);
+    
+    /* Convert perturbation into rectangular coordinates */
+    p1 = sin(dth) * cos(dph);
+    p2 = sin(dth) * sin(dph);
+    p3 = cos(dth);
+    
+    *cx = cos(th0) * p1 + 0 * p2 + sin(th0) * p3;
+    *cy = 0 * p1 + 1 * p2 + 0 * p3;
+    *cz = -sin(th0) * p1 + 0 * p2 + cos(th0) * p3;
+    
+    p1 = *cx; /* Copy back to save a bit of storage space */
+    p2 = *cy;
+    p3 = *cz;
+    
+    *cx = cos(ph0) * p1 + sin(ph0) * p2 + 0 * p3;
+    *cy = -sin(ph0) * p1 + cos(ph0) * p2 + 0 * p3;
+    *cz = 0 * p1 + 0 * p2 + 1 * p3;
+}
+
+static int fiberNA(REAL NA, REAL sinth) {
+    REAL a, b;
+    
+    if (sinth < -1 || sinth > 1) {
+        ASSERT(1);
+    }
+    
+    /* Delta-function distributions, will never match */
+    if (NA <= 0.0 || NA > 1)
+        return 0;
+    
+    /* Normalization for distribution */
+    b = NA * NA / M_LN2;
+    a = sqrt(b / M_PI) * erf(1 / sqrt(b));
+    
+    /* Accept if p < f(x) */
+    
+    if (RANDF() < exp(-b * sinth * sinth) / a)
+        return 1;
+    else
+        return 0;
+}
+#endif
 
 void tmc_error(int id,const char *msg,const char *fname,const int linenum) {
     fprintf(stderr, "tMCimg ERROR(%d):%s in %s:%d\n", id, msg, fname, linenum);
