@@ -40,10 +40,12 @@
 #define EPS 2.2204e-16f
 
 #ifdef SINGLE_PREC
+#define READ_ONE_REAL "%f"
 #define READ_THREE_REALS "%f %f %f"
 #define READ_REAL_INT_INT_INT "%f %d %d %d"
 typedef float REAL;
 #else
+#define READ_ONE_REAL "%lf"
 #define READ_THREE_REALS "%lf %lf %lf"
 #define READ_REAL_INT_INT_INT "%lf %d %d %d"
 typedef double REAL;
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
     int nA1step, nA3step;
     
     REAL tmus[MAX_TISS_NUM], tmua[MAX_TISS_NUM]; /* OPTICAL PROPERTIES OF THE DIFFERENT TISSUE TYPES */
-    REAL tg[MAX_TISS_NUM],   tn[MAX_TISS_NUM];
+    REAL tg[MAX_TISS_NUM], tn[MAX_TISS_NUM];
     
     REAL x,y,z; /* CURRENT PHOTON POSITION */
     REAL xi, yi, zi; /* INITIAL POSITION OF THE PHOTON */
@@ -83,7 +85,11 @@ int main(int argc, char *argv[])
     REAL gg, phi, theta, sphi, cphi, stheta, ctheta; /* SCATTERING ANGLES */
     REAL c1,c2,c3; /* DIRECTION COSINES */
     REAL c1o, c2o, c3o; /* OLD DIRECTION COSINES */
+#ifdef ANGLE_FROM_NA
+    REAL cna; /* NUMERICAL APERTURE FOR CALCULATING ANGLE */
+#else
     REAL cxi, cyi, czi; /* INITIAL DIRECTION COSINES */
+#endif
     
     REAL *II, IIout[2]; /* FOR STORING THE 2-PT FLUENCE, IIout is for outside the II range */
     
@@ -110,7 +116,11 @@ int main(int argc, char *argv[])
 #ifdef MOMENTUM_TRANSFER
     REAL momTiss[MAX_TISS_NUM];
 #endif
+#ifdef ANGLE_FROM_NA
     REAL rnm, rnm2; /* RANDOM NUMBER */
+#else
+    REAL rnm; /* RANDOM NUMBER */
+#endif
     
     FILE *fp; /* FILE POINTERS FOR SAVING THE DATA */
     char filenm[MAX_FILE_PATH]; /* FILE NAME FOR DATA FILE */
@@ -139,12 +149,16 @@ int main(int argc, char *argv[])
     }
     
     /* READ THE INPUT FILE */
-    ASSERT(fscanf(fp, "%d", &NT) != 1);    /* TOTAL NUMBER OF PHOTONS */
-    ASSERT(fscanf(fp, "%d", &idum) != 1);  /* RANDOM NUMBER SEED */
-    ASSERT(fscanf(fp, READ_THREE_REALS, &xi, &yi, &zi) != 3);         /* INITIAL POSITION OF PHOTON */
-    ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3);      /* INITIAL DIRECTION OF PHOTON */
-    ASSERT(fscanf(fp, READ_THREE_REALS, &minT, &maxT, &stepT) != 3);  /* MIN, MAX, STEP TIME FOR RECORDING */
-    ASSERT(fscanf(fp, "%d %d", &nA1step, &nA3step) != 2);  /* NUMBER OF ANGULAR STEPS FOR II */
+    ASSERT(fscanf(fp, "%d", &NT) != 1); /* TOTAL NUMBER OF PHOTONS */
+    ASSERT(fscanf(fp, "%d", &idum) != 1); /* RANDOM NUMBER SEED */
+    ASSERT(fscanf(fp, READ_THREE_REALS, &xi, &yi, &zi) != 3); /* INITIAL POSITION OF PHOTON */
+#ifdef ANGLE_FROM_NA
+    ASSERT(fscanf(fp, READ_ONE_REAL, &cna) != 1); /* NUMERICAL APERTURE OF PHOTON */
+#else
+    ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3); /* INITIAL DIRECTION OF PHOTON */
+#endif
+    ASSERT(fscanf(fp, READ_THREE_REALS, &minT, &maxT, &stepT) != 3); /* MIN, MAX, STEP TIME FOR RECORDING */
+    ASSERT(fscanf(fp, "%d %d", &nA1step, &nA3step) != 2); /* NUMBER OF ANGULAR STEPS FOR II */
     
     /* Calculate number of gates, taking into account floating point division errors. */
     nTstep_float = (maxT-minT)/stepT;
@@ -156,7 +170,7 @@ int main(int argc, char *argv[])
     else
         nTstep = ceil(nTstep_float);
     
-    ASSERT(fscanf(fp, "%s", segFile) != 1);                        /* FILE CONTAINING TISSUE STRUCTURE */
+    ASSERT(fscanf(fp, "%s", segFile) != 1); /* FILE CONTAINING TISSUE STRUCTURE */
     
     /* READ IMAGE DIMENSIONS */
     ASSERT(fscanf(fp, READ_REAL_INT_INT_INT, &xstep, &nxstep, &Ixmin, &Ixmax) != 4);
@@ -167,7 +181,7 @@ int main(int argc, char *argv[])
     nIystep = Iymax - Iymin + 1;
     nIzstep = Izmax - Izmin + 1;
     
-    minstepsize = MIN(xstep, MIN(ystep, zstep));  /*get the minimum dimension*/
+    minstepsize = MIN(xstep, MIN(ystep, zstep)); /* get the minimum dimension */
     rxstep = 1.f / xstep;
     rystep = 1.f / ystep;
     rzstep = 1.f / zstep;
@@ -220,13 +234,13 @@ int main(int argc, char *argv[])
     
     fclose(fp);
     
-    
+#ifndef ANGLE_FROM_NA
     /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
     foo = sqrtf(cxi * cxi + cyi * cyi + czi * czi);  /*foo is the input */
     cxi /= foo;
     cyi /= foo;
     czi /= foo;
-    
+#endif
     
     /* CALCULATE THE MIN AND MAX PHOTON LENGTH FROM THE MIN AND MAX PROPAGATION TIMES */
     Lmax = maxT * C_VACUUM / tn[1];
@@ -275,28 +289,6 @@ int main(int argc, char *argv[])
     i = DIST2VOX(xi, rxstep);
     j = DIST2VOX(yi, rystep);
     k = DIST2VOX(zi, rzstep);
-    /* REMOVED IN tMCimgLOT
-     tissueIndex=tissueType[i][j][k];
-     while( tissueIndex!=0 && i>0 && i<nxstep && j>0 && j<nystep &&
-     k>0 && k<nzstep ) {
-     xi -= cxi*minstepsize;
-     yi -= cyi*minstepsize;
-     zi -= czi*minstepsize;
-     i = DIST2VOX(xi,rxstep);
-     j = DIST2VOX(yi,rystep);
-     k = DIST2VOX(zi,rzstep);
-     tissueIndex=tissueType[i][j][k];
-     }
-     while( tissueIndex==0 ) {
-     xi += cxi*minstepsize;
-     yi += cyi*minstepsize;
-     zi += czi*minstepsize;
-     i = DIST2VOX(xi,rxstep);
-     j = DIST2VOX(yi,rystep);
-     k = DIST2VOX(zi,rzstep);
-     tissueIndex=tissueType[i][j][k];
-     }
-     */
     
     /* NUMBER PHOTONS EXECUTED SO FAR */
     N = 0;
@@ -337,14 +329,8 @@ int main(int argc, char *argv[])
         y = yi;
         z = zi;
         
-        /* INITIAL DIRECTION OF PHOTON */
-        // LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS
-        /*rnm = 2.f * 3.14159f * (REAL)rand()/RAND_MAX;
-         rnm2 = (REAL)rand()/RAND_MAX;
-         c3 = 1.f - 0.5 * rnm2;
-         c1 = cosf( rnm ) * sqrtf( 1.f - c3 );
-         c2 = sinf( rnm ) * sqrtf( 1.f - c3 );*/
-        
+#ifdef ANGLE_FROM_NA
+        /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
         rnm = RANDF();
         rnm2 = RANDF();
         c1 = sqrtf(-2.f * logf(rnm)) * cosf(2.f * M_PI * rnm2);
@@ -352,13 +338,17 @@ int main(int argc, char *argv[])
         c3 = 10.f;
         
         /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
-        foo = sqrtf(c1*c1 + c2*c2 + c3*c3);  /*foo is the input */
+        foo = sqrtf(c1 * c1 + c2 * c2 + c3 * c3); /*foo is the input */
         c1 /= foo;
         c2 /= foo;
         c3 /= foo;
-        /*        c1 = cxi;
-         c2 = cyi;
-         c3 = czi; */
+#else
+        /* INITIAL DIRECTION OF PHOTON */
+        c1 = cxi;
+        c2 = cyi;
+        c3 = czi;
+#endif
+        
         c1o = c1;
         c2o = c2;
         c3o = c3;
