@@ -46,7 +46,7 @@ if size(c, 1) ~= 1
     fclose(fid);
     error('Unexpected initial position');
 end
-config.initial_position = c{1};
+config.initial_position = cat(2, c{:})';
 
 if config.version == 2
     % load radius
@@ -64,7 +64,7 @@ if size(c, 1) ~= 1
     fclose(fid);
     error('Unexpected initial direction');
 end
-config.initial_direction = c{1};
+config.initial_direction = cat(2, c{:})';
 
 % load numerical aperture
 c = textscan(fid, '%f\n', 1);
