@@ -19,7 +19,7 @@
 #include <string.h>
 #include <time.h>
 
-#define INPUT_VERSION 1
+#define INPUT_VERSION 2
 
 #define C_VACUUM 2.9979e11f
 #define TRUE 1
@@ -60,9 +60,13 @@ int idum; /* SEED FOR RANDOM NUMBER GENERATOR - A LARGE NEGATIVE NUMBER IS REQUI
 void tmc_error(int id, const char *msg, const char *fname, const int linenum);
 void tmc_assert(int ret, const char *fname, const int linenum);
 
+#ifdef SOURCE_RADIUS
+void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c2, const REAL c3, const REAL ri);
+#endif
+
 #ifdef ANGLE_FROM_NA
+//REAL gaussRand();
 void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna);
-static int fiberNA(REAL NA, REAL sinth);
 #endif
 
 #define MAX_FILE_PATH 1024
@@ -95,6 +99,9 @@ int main(int argc, char *argv[])
     REAL c1,c2,c3; /* DIRECTION COSINES */
     REAL c1o, c2o, c3o; /* OLD DIRECTION COSINES */
     REAL cxi, cyi, czi; /* INITIAL DIRECTION COSINES */
+#ifdef SOURCE_RADIUS
+    REAL ri; /* INITAL SOURCE RADIUS */
+#endif
 #ifdef ANGLE_FROM_NA
     REAL cna; /* NUMERICAL APERTURE FOR CALCULATING ANGLE */
 #endif
@@ -165,6 +172,9 @@ int main(int argc, char *argv[])
     ASSERT(fscanf(fp, "%d", &NT) != 1); /* TOTAL NUMBER OF PHOTONS */
     ASSERT(fscanf(fp, "%d", &idum) != 1); /* RANDOM NUMBER SEED */
     ASSERT(fscanf(fp, READ_THREE_REALS, &xi, &yi, &zi) != 3); /* INITIAL POSITION OF PHOTON */
+#ifdef SOURCE_RADIUS
+    ASSERT(fscanf(fp, READ_ONE_REAL, &ri) != 1); /* SOURCE RADIUS */
+#endif
     ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3); /* INITIAL DIRECTION OF PHOTON */
 #ifdef ANGLE_FROM_NA
     ASSERT(fscanf(fp, READ_ONE_REAL, &cna) != 1); /* NUMERICAL APERTURE OF PHOTON */
@@ -345,17 +355,17 @@ int main(int argc, char *argv[])
         c2 = cyi;
         c3 = czi;
         
+#ifdef SOURCE_RADIUS
+        /* RANDOMIZE OVER RADIUS */
+        if (ri > 0) {
+            tmc_random_in_radius(&x, &y, &z, c1, c2, c3, ri);
+        }
+#endif
+        
 #ifdef ANGLE_FROM_NA
         if (cna > 0) {
             /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
             tmc_perturb_angle(&c1, &c2, &c3, cna);
-            
-            /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
-            // probably no longer needed, perturb seems to preserve the direction
-            foo = sqrt(c1 * c1 + c2 * c2 + c3 * c3); /*foo is the input */
-            c1 /= foo;
-            c2 /= foo;
-            c3 /= foo;
         }
 #endif
         
@@ -489,9 +499,9 @@ int main(int argc, char *argv[])
                     c2 = stheta * (c2o * c3o * cphi + c1o * sphi) / sqrt(1.f - c3o * c3o) + c2o * ctheta;
                     c3 = -stheta * cphi * sqrt(1 - c3o * c3o) + c3o * ctheta;
                 } else {
-                    c1 = stheta*cphi;
-                    c2 = stheta*sphi;
-                    c3 = ctheta*c3;
+                    c1 = stheta * cphi;
+                    c2 = stheta * sphi;
+                    c3 = ctheta * c3;
                 }
                 
                 /* INDEX OF PHOTON DIRECTION */
@@ -616,71 +626,85 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-#ifdef ANGLE_FROM_NA
-/* 
- * BASED ON ORIGINAL: http://www.nmr.mgh.harvard.edu/DOT/resources/tmcimg/ but there
- * is probably a better way to calculate the following.
- */
-void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna) {
-    REAL th0, dth;
-    REAL ph0, dph;
-    REAL p1, p2, p3;
+#ifdef SOURCE_RADIUS
+void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c2, const REAL c3, const REAL ri) {
+    /* TODO: use orthogonal vector to c1, c2, c3 */
+    /* for now, hard code */
     
-    /* Original input direction characterized as a pair of rotation matrices characterized by two angles */
+    REAL theta = RANDF() * M_PI * 2.f;
+    REAL radius = ri * sqrt(RANDF());
     
-    th0 = acos(*cz);
-    ph0 = atan2(*cy, *cx);
-    
-    /* Perturbation d\Omega to the propagation direction */
-    
-    dph = 2.f * M_PI * RANDF();
-    
-    do {
-        dth = 2 * RANDF() - 1;
-    } while (fiberNA(cna, dth) != 1);
-    
-    /* Convert to sin */
-    dth = asin(dth);
-    
-    /* Convert perturbation into rectangular coordinates */
-    p1 = sin(dth) * cos(dph);
-    p2 = sin(dth) * sin(dph);
-    p3 = cos(dth);
-    
-    *cx = cos(th0) * p1 + 0 * p2 + sin(th0) * p3;
-    *cy = 0 * p1 + 1 * p2 + 0 * p3;
-    *cz = -sin(th0) * p1 + 0 * p2 + cos(th0) * p3;
-    
-    p1 = *cx; /* Copy back to save a bit of storage space */
-    p2 = *cy;
-    p3 = *cz;
-    
-    *cx = cos(ph0) * p1 + sin(ph0) * p2 + 0 * p3;
-    *cy = -sin(ph0) * p1 + cos(ph0) * p2 + 0 * p3;
-    *cz = 0 * p1 + 0 * p2 + 1 * p3;
+    *x = *x + radius * cos(theta);
+    *y = *y + radius * sin(theta);
 }
+#endif
 
-static int fiberNA(REAL NA, REAL sinth) {
-    REAL a, b;
+
+#ifdef ANGLE_FROM_NA
+// From http://c-faq.com/lib/gaussian.html
+// Use a method discussed in Knuth and due originally to Marsaglia:
+//REAL gaussRand() {
+//    static double v1, v2, s;
+//    static int phase = 0;
+//    double x;
+//    
+//    if (phase == 0) {
+//        do {
+//            double u1 = (double)rand() / RAND_MAX;
+//            double u2 = (double)rand() / RAND_MAX;
+//            
+//            v1 = 2 * u1 - 1;
+//            v2 = 2 * u2 - 1;
+//            s = v1 * v1 + v2 * v2;
+//        } while (s >= 1 || s == 0);
+//        x = v1 * sqrt(-2 * log(s) / s);
+//    } else {
+//        x = v2 * sqrt(-2 * log(s) / s);
+//    }
+//    
+//    // toggle phase
+//    phase = 1 - phase;
+//    
+//    return (REAL)x;
+//}
+
+/* [cx, cy, cz] has norm 1, this must be preserved during perturbation */
+void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL cna) {
+    REAL l, m, n;
+    REAL theta, theta_cos, theta_sin;
+    REAL x, y, z;
     
-    if (sinth < -1 || sinth > 1) {
-        ASSERT(1);
-    }
+    // STEP 1: rotate around orthogonal axis
+    /* TODO: use orthogonal vector to c1, c2, c3 */
+    /* for now, hard code */
+    l = 1; m = 0; n = 0;
+    theta = RANDF() * asin(cna);
     
-    /* Delta-function distributions, will never match */
-    if (NA <= 0.0 || NA > 1)
-        return 0;
+    // perform rotation
+    x = *cx;
+    y = *cy;
+    z = *cz;
+    theta_cos = cos(theta);
+    theta_sin = sin(theta);
+    *cx = (l * l * (1 - theta_cos) + theta_cos) * x + (m * l * (1 - theta_cos) - n * theta_sin) * y + (n * l * (1 - theta_cos) + m * theta_sin);
+    *cy = (l * m * (1 - theta_cos) + n * theta_sin) * x + (m * m * (1 - theta_cos) + theta_cos) * y + (n * m * (1 - theta_cos) - l * theta_sin);
+    *cz = (l * n * (1 - theta_cos) - m * theta_sin) * x + (m * n * (1 - theta_cos) + l * theta_sin) * y + (n * n * (1 - theta_cos) + theta_cos);
     
-    /* Normalization for distribution */
-    b = NA * NA / M_LN2;
-    a = sqrt(b / M_PI) * erf(1 / sqrt(b));
+    // STEP 2: rotate around the primary axis
+    /* TODO: use original c1, c2, c3 vector */
+    /* for now, hard code */
+    l = 0; m = 0; n = 1;
+    theta = RANDF() * 2.f * M_PI;
     
-    /* Accept if p < f(x) */
-    
-    if (RANDF() < exp(-b * sinth * sinth) / a)
-        return 1;
-    else
-        return 0;
+    // perform rotation
+    x = *cx;
+    y = *cy;
+    z = *cz;
+    theta_cos = cos(theta);
+    theta_sin = sin(theta);
+    *cx = (l * l * (1 - theta_cos) + theta_cos) * x + (m * l * (1 - theta_cos) - n * theta_sin) * y + (n * l * (1 - theta_cos) + m * theta_sin);
+    *cy = (l * m * (1 - theta_cos) + n * theta_sin) * x + (m * m * (1 - theta_cos) + theta_cos) * y + (n * m * (1 - theta_cos) - l * theta_sin);
+    *cz = (l * n * (1 - theta_cos) - m * theta_sin) * x + (m * n * (1 - theta_cos) + l * theta_sin) * y + (n * n * (1 - theta_cos) + theta_cos);
 }
 #endif
 

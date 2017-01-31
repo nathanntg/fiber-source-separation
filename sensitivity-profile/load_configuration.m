@@ -8,7 +8,7 @@ config = struct();
 fid = fopen(fn);
 
 % supported versions
-supported_versions = [1];
+supported_versions = [1, 2];
 
 % load file version
 c = textscan(fid, '%d\n', 1);
@@ -47,6 +47,16 @@ if size(c, 1) ~= 1
     error('Unexpected initial position');
 end
 config.initial_position = c{1};
+
+if config.version == 2
+    % load radius
+    c = textscan(fid, '%f\n', 1);
+    if size(c, 1) ~= 1
+        fclose(fid);
+        error('Unexpected initial radius');
+    end
+    config.initial_radius = c{1};
+end
 
 % load inital direction
 c = textscan(fid, '%f %f %f\n', 1);
