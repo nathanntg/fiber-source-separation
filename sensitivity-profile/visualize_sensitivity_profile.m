@@ -23,7 +23,7 @@ im = log10(squeeze(max(I(:, iFy, :), 1e-10)));
 % show image
 figure;
 % convert units to microns
-imagesc(x .* 1000, z .* 1000, im, [0 4]);
+imagesc(z .* 1000, x .* 1000, im, [0 4]);
 colormap(jet);
 % add axis and labels
-axis xy; xlabel('x [{\mu}]'); ylabel('z [{\mu}]');
+axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
