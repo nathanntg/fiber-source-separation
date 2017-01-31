@@ -1,4 +1,4 @@
-function [m, num_inputs] = generate_realistic_mixing(num_fibers, varargin)
+function [m, num_inputs] = generate_realistic_mixing(num_fibers, profile, varargin)
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers
@@ -28,10 +28,6 @@ angle_distribution = [5 0; 0 5];
 
 % fiber width
 fiber_diameter = 8;
-fiber_half_angle_of_acceptance = 16.2;
-
-% core diameter
-core_diameter = 2 * sqrt(0.4 * (fiber_diameter / 2) ^ 2);
 
 % show figures
 figures = true;
@@ -76,9 +72,6 @@ end
 fibers = mvnrnd(volume ./ 2, fiber_distribution, num_fibers)';
 fiber_angles = deg2rad(mvnrnd([0, 0], angle_distribution, num_fibers))';
 
-% slope of light cone
-cone_radius = core_diameter / 2;
-cone_slope = tan(deg2rad(fiber_half_angle_of_acceptance));
 
 % make scatter histogram
 if figures
@@ -87,7 +80,7 @@ if figures
     title('Distribution of fibers');
 end
 
-%% FIGURE OUT CONE OF VIEW
+%% APPLY PROFILE
 m = zeros(num_fibers, num_cells);
 for i = 1:num_fibers
     % get relative cell positions
@@ -99,18 +92,19 @@ for i = 1:num_fibers
     r = [cos(theta(2)) 0 sin(theta(2)); 0 1 0; -sin(theta(2)) 0 cos(theta(2))] * r; % y
     cells_rel = r * cells_rel; % rotate
     
-    % calculate light cone radius
-    radius2 = (cone_radius + cells_rel(3, :) * cone_slope) .^ 2;
+    % calculate strength from sensitivity profile
+    cur = interp3(profile.x, profile.y, profile.z, profile.volume, cells_rel(1, :), cells_rel(2, :), cells_rel(3, :));
     
-    % in radius
-    idx = (cells_rel(1, :) .^ 2 + cells_rel(2, :) .^ 2) <= radius2;
-    idx = idx & cells_rel(3, :) >= 0;
+    % outside
+    idx = cells_rel(1, :) < profile.x(1) | cells_rel(1, :) > profile.x(end) | ...
+        cells_rel(2, :) < profile.y(1) | cells_rel(2, :) > profile.y(end) | ...
+        cells_rel(3, :) < profile.z(1) | cells_rel(3, :) > profile.z(end);
     
-    % constant strength
-    strength = (cone_radius ^ 2) ./ radius2;
+    % clear outside
+    cur(idx) = 0;
     
     % add to mixing matrix
-    m(i, :) = idx .* strength;
+    m(i, :) = cur;
 end
 
 % remove unused cells
@@ -137,9 +131,17 @@ if figures
     hist(m(:), 100);
     title('Distribution of weights');
     
+    % core diameter
+    core_diameter = 2 * sqrt(0.4 * (fiber_diameter / 2) ^ 2);
+    
+    % slope of light cone
+    fiber_half_angle_of_acceptance = 16.2; % degrees
+    cone_radius = core_diameter / 2;
+    cone_slope = tan(deg2rad(fiber_half_angle_of_acceptance));
+    
     figure;
     c = jet(256);
-    scatter3(cells_rel(1, :), cells_rel(2, :), cells_rel(3, :), 50, c(round(1 + mat2gray(idx .* strength) .* 210 + idx .* 24), :), 'filled');
+    scatter3(cells_rel(1, :), cells_rel(2, :), cells_rel(3, :), 50, c(round(1 + mat2gray(cur) .* 210 + (cur > 0) .* 24), :), 'filled');
     [x, y, z] = cylinder([cone_radius; cone_radius + 60 * cone_slope]);
     hold on;
     o = surf(x, y, z * 60);
