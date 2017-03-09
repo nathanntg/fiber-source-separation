@@ -23,6 +23,7 @@ smooth_mixing = []; % row: nearby inputs influence output; column: nearby output
 
 % mixing
 realistic = false;
+profile = [];
 
 % ICA
 g = 'skew';
@@ -44,7 +45,10 @@ end
 
 %% GENERATE MIXING MATRIX
 if realistic
-    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, 'figures', false, 'stats', false);
+    if isempty(profile)
+        profile = sp_geometric();
+    end
+    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, profile, 'figures', false, 'stats', false);
 else
     m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
 end
