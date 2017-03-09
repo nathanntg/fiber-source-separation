@@ -678,7 +678,7 @@ void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL cna) {
     /* TODO: use orthogonal vector to c1, c2, c3 */
     /* for now, hard code */
     l = 1; m = 0; n = 0;
-    theta = RANDF() * asin(cna);
+    theta = sqrt(RANDF()) * asin(cna);
     
     // perform rotation
     x = *cx;
