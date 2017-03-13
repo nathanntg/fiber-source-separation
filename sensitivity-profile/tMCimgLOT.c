@@ -65,7 +65,6 @@ void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c
 #endif
 
 #ifdef ANGLE_FROM_NA
-//REAL gaussRand();
 void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna);
 #endif
 
@@ -641,70 +640,25 @@ void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c
 
 
 #ifdef ANGLE_FROM_NA
-// From http://c-faq.com/lib/gaussian.html
-// Use a method discussed in Knuth and due originally to Marsaglia:
-//REAL gaussRand() {
-//    static double v1, v2, s;
-//    static int phase = 0;
-//    double x;
-//    
-//    if (phase == 0) {
-//        do {
-//            double u1 = (double)rand() / RAND_MAX;
-//            double u2 = (double)rand() / RAND_MAX;
-//            
-//            v1 = 2 * u1 - 1;
-//            v2 = 2 * u2 - 1;
-//            s = v1 * v1 + v2 * v2;
-//        } while (s >= 1 || s == 0);
-//        x = v1 * sqrt(-2 * log(s) / s);
-//    } else {
-//        x = v2 * sqrt(-2 * log(s) / s);
-//    }
-//    
-//    // toggle phase
-//    phase = 1 - phase;
-//    
-//    return (REAL)x;
-//}
-
 /* [cx, cy, cz] has norm 1, this must be preserved during perturbation */
 void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL cna) {
-    REAL l, m, n;
-    REAL theta, theta_cos, theta_sin;
-    REAL x, y, z;
-    
-    // STEP 1: rotate around orthogonal axis
     /* TODO: use orthogonal vector to c1, c2, c3 */
     /* for now, hard code */
-    l = 1; m = 0; n = 0;
-    theta = sqrt(RANDF()) * asin(cna);
     
-    // perform rotation
-    x = *cx;
-    y = *cy;
-    z = *cz;
-    theta_cos = cos(theta);
-    theta_sin = sin(theta);
-    *cx = (l * l * (1 - theta_cos) + theta_cos) * x + (m * l * (1 - theta_cos) - n * theta_sin) * y + (n * l * (1 - theta_cos) + m * theta_sin);
-    *cy = (l * m * (1 - theta_cos) + n * theta_sin) * x + (m * m * (1 - theta_cos) + theta_cos) * y + (n * m * (1 - theta_cos) - l * theta_sin);
-    *cz = (l * n * (1 - theta_cos) - m * theta_sin) * x + (m * n * (1 - theta_cos) + l * theta_sin) * y + (n * n * (1 - theta_cos) + theta_cos);
+    REAL rnm1, rnm2, norm;
     
-    // STEP 2: rotate around the primary axis
-    /* TODO: use original c1, c2, c3 vector */
-    /* for now, hard code */
-    l = 0; m = 0; n = 1;
-    theta = RANDF() * 2.f * M_PI;
+    /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
+    rnm1 = RANDF();
+    rnm2 = RANDF();
+    *cx = sqrt(-2.0 * logf(rnm1)) * cos(2.0 * M_PI * rnm2);
+    *cy = sqrt(-2.0 * logf(rnm1)) * sin(2.0 * M_PI * rnm2);
+    *cz = 1.0 / tan(cna);
     
-    // perform rotation
-    x = *cx;
-    y = *cy;
-    z = *cz;
-    theta_cos = cos(theta);
-    theta_sin = sin(theta);
-    *cx = (l * l * (1 - theta_cos) + theta_cos) * x + (m * l * (1 - theta_cos) - n * theta_sin) * y + (n * l * (1 - theta_cos) + m * theta_sin);
-    *cy = (l * m * (1 - theta_cos) + n * theta_sin) * x + (m * m * (1 - theta_cos) + theta_cos) * y + (n * m * (1 - theta_cos) - l * theta_sin);
-    *cz = (l * n * (1 - theta_cos) - m * theta_sin) * x + (m * n * (1 - theta_cos) + l * theta_sin) * y + (n * n * (1 - theta_cos) + theta_cos);
+    /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
+    norm = sqrt((*cx * *cx) + (*cy * *cy) + (*cz * *cz));
+    *cx /= norm;
+    *cy /= norm;
+    *cz /= norm;
 }
 #endif
 
