@@ -1,8 +1,8 @@
 % load configuration
-config = load_configuration('fiber.inp');
+config = load_configuration('fiber-exc.inp');
 
 % load sensitivity profile
-[I, IoOut] = load_sensitivity_profile('fiber.2pt', config);
+[I, IoOut] = load_sensitivity_profile('fiber-exc.2pt', config);
 
 % get slice through source position
 iFy = round(config.initial_position(2) * size(I, 2));
