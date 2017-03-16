@@ -58,7 +58,7 @@ for idx_a = 1:length(param_a_values)
         
         % store output
         if ~detailed
-            output(idx_a, idx_b) = mean(values);
+            output(idx_a, idx_b, :) = values;
         end
         
         % print progress
@@ -83,7 +83,7 @@ if nargout < 1 && ~detailed
         elseif 1 < min(size(y))
             y = y(:, 1);
         end
-        imagesc(x, y, output);
+        imagesc(x, y, mean(output, 3));
         axis xy;
         title('Accuracy of source separation');
         xlabel(strrep(param_b_name, '_' ,' '));
