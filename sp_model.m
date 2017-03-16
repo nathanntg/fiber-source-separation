@@ -1,6 +1,11 @@
-function profile = sp_model(fn)
+function profile = sp_model(fn, threshold)
 %SP_MODEL Summary of this function goes here
 %   Detailed explanation goes here
+
+%% DEFAULTS
+if ~exist('threshold', 'var')
+    threshold = []; % 1e-3;
+end
 
 %% READ FILE
 a = load(fn);
@@ -32,7 +37,21 @@ volume = I;
 volume(volume < 0) = 0;
 volume = volume ./ max(volume(:));
 
+% apply threshold
+if ~isempty(threshold)
+    above_threshold = volume > threshold;
+    
+    inc_x = any(any(above_threshold, 1), 3);
+    inc_y = any(any(above_threshold, 2), 3);
+    inc_z = any(any(above_threshold, 1), 2);
+    
+    x = x(inc_x);
+    y = y(inc_y);
+    z = z(inc_z);
+    volume = volume(inc_y, inc_x, inc_z);
+end
+
 % build profile structure
-profile = struct('x', x, 'y', y, 'z', z, 'volume', volume);
+profile = struct('x', x, 'y', y, 'z', z, 'volume', volume, 'd', 3);
 
 end

@@ -58,6 +58,6 @@ for i = 1:length(z)
 end
 
 % build profile structure
-profile = struct('x', x, 'y', y, 'z', z, 'volume', volume);
+profile = struct('x', x, 'y', y, 'z', z, 'volume', volume, 'd', 3);
 
 end

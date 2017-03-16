@@ -92,16 +92,8 @@ for i = 1:num_fibers
     r = [cos(theta(2)) 0 sin(theta(2)); 0 1 0; -sin(theta(2)) 0 cos(theta(2))] * r; % y
     cells_rel = r * cells_rel; % rotate
     
-    % calculate strength from sensitivity profile
-    cur = interp3(profile.x, profile.y, profile.z, profile.volume, cells_rel(1, :), cells_rel(2, :), cells_rel(3, :));
-    
-    % outside
-    idx = cells_rel(1, :) < profile.x(1) | cells_rel(1, :) > profile.x(end) | ...
-        cells_rel(2, :) < profile.y(1) | cells_rel(2, :) > profile.y(end) | ...
-        cells_rel(3, :) < profile.z(1) | cells_rel(3, :) > profile.z(end);
-    
-    % clear outside
-    cur(idx) = 0;
+    % apply profile
+    cur = apply_profile(profile, cells_rel);
     
     % add to mixing matrix
     m(i, :) = cur;
