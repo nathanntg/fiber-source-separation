@@ -110,7 +110,7 @@ if stats
     fprintf('Number of cells seen: %d\n', num_inputs);
     fprintf('Number of cells seen well: %d\n', sum(max(m, [], 1) > well));
     fprintf('Cells seen by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1));
-    fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > 0, 1) > 1 & max(m, [], 1) > well));
+    fprintf('Cells seen well by multiple fibers: %d\n', sum(sum(m > well, 1) > 1));
     fprintf('Condition number: %f\n', cond(m));
 end
 
