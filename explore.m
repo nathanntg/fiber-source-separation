@@ -62,7 +62,7 @@ for idx_a = 1:length(param_a_values)
         end
         
         % print progress
-        cnt = cnt + 1;
+        cnt = cnt + iterations;
         fprintf('Progress: %d%%\n', round(100 * cnt / max_cnt));
     end
 end
