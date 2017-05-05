@@ -8,7 +8,7 @@ function [m, num_inputs] = generate_realistic_mixing(num_fibers, profile, vararg
 % Area X is 2.262 mm^3
 % assuming sphere, that works out to a radius of 814.3
 % use slightly smaller X and Y dimensions
-volume = [1200; 1200; 400];
+volume = [1200; 1200; 400]; % microns
 
 % Density of cells to be simulated
 % from Walton et al 2012, based on excitatory cells in HVC
@@ -21,7 +21,7 @@ viral_efficacy = 1;
 % Distribution of fibers is assumed to be normal
 % LNY 63 has bivariate 49.7-95.4 micron standard deviation (assuming
 % independent), use slightly larger for more fibers
-fiber_distribution = [125 0 0; 0 125 0; 0 0 15];
+fiber_distribution = [125 0 0; 0 125 0; 0 0 15]; % microns
 
 % angle of fibers, in degrees
 angle_distribution = [5 0; 0 5];
