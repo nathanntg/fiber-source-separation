@@ -41,6 +41,21 @@ figure;
 bar(s(1:150)); xlim([0 150]);
 xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - 1 fiber');
 
+%% average over multiple single fibers
+iter = 50;
+number = 150;
+ss = zeros(iter, number);
+a = [];
+for i = 1:iter
+    [m_exc, ~] = generate_realistic_mixing(1, profile_exc, 'figures', false, 'stats', false);
+    s = sort(m_exc, 'descend');
+    ss(i, :) = s(1:number);
+    a = [a sum(s > 0.1)];
+end
+figure;
+bar(mean(ss)); xlim([0 number + 1]);
+xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - average per fiber');
+
 %% plot distributions for multiple fibers
 rng(0);
 number = 100;
