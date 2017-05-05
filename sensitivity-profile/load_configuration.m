@@ -121,7 +121,7 @@ tissue_types = c{1};
 
 % load tissue types
 c = textscan(fid, '%f %f %f %f\n', tissue_types);
-if size(c, 1) ~= tissue_types
+if size(c, 1) ~= 1 || size(c{1}, 1) ~= tissue_types
     fclose(fid);
     error('Unexpected tissue type data');
 end
