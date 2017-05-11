@@ -18,8 +18,10 @@ im = [profile_exc.volume(end:-1:2, :); profile_exc.volume];
 y = [-1 * profile_exc.r(end:-1:2) profile_exc.r];
 figure;
 imagesc(profile_exc.z, y, log10(im), [-4 0]);
+colormap('jet');
 title('Camera excitation profile');
 axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
+set(gca, 'XTick', [0 400 800]); set(gca, 'YTick', [-400 0 400]);
 
 %% plot distributions for single fibers
 rng(0);
@@ -44,8 +46,8 @@ xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - average per 
 
 %% plot distributions for multiple fibers
 rng(0);
-width = 20; height = 20;
-[m_exc, ~] = generate_camera_mixing(width, height, profile_exc, 'figures', false);
+width = 64; height = 48;
+[m_exc, ~, cells] = generate_camera_mixing(width, height, profile_exc, 'figures', false);
 
 % nice plot
 figure;
@@ -77,6 +79,43 @@ plot(sort(kurtosis(m_exc, 0, 1), 'descend')); title('Kurtosis');
 figure;
 plot(sort(skewness(m_exc, 0, 1), 'descend')); title('Skewness');
 
+%% 2D images
+[value, clearest_cell] = max(m_exc, [], 2);
+[~, ~, clearest_num] = unique(clearest_cell);
+im = label2rgb(reshape(clearest_num, height, width), 'lines');
+image(im);
+im = ind2rgb(reshape(clearest_num, height, width), lines(max(clearest_num)));
+
+figure;
+image(im);
+title('Clearest Neurons');
+
+figure;
+imagesc(reshape(value, height, width));
+colormap('jet');
+colorbar;
+title('Strength of Neural Signal');
+
+% combine
+im_alpha = mat2gray(reshape(value, height, width));
+im_composite = im .* repmat(im_alpha, 1, 1, 3);
+figure;
+image(im_composite);
+
+% depth
+figure;
+imagesc(reshape(cells(3, clearest_cell), height, width));
+colormap('jet');
+h = colorbar; h.Label.String = 'Depth ({\mu})';
+title('Depth of Clearest Neuron');
+
+% combine
+figure;
+imagesc(reshape(cells(3, clearest_cell), height, width));
+alpha(im_alpha);
+colormap('jet');
+h = colorbar; h.Label.String = 'Depth ({\mu})';
+title('Depth of Clearest Neuron');
 
 %% explore number
 areas = [50 125 200 275 350 425 500]; % SD

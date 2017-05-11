@@ -1,4 +1,4 @@
-function [m, num_inputs] = generate_camera_mixing(pixel_width, pixel_height, profile, varargin)
+function [m, num_inputs, cells] = generate_camera_mixing(pixel_width, pixel_height, profile, varargin)
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers
