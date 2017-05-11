@@ -65,7 +65,7 @@ void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c
 #endif
 
 #ifdef ANGLE_FROM_NA
-void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL cna);
+void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, REAL haa);
 #endif
 
 #define MAX_FILE_PATH 1024
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     REAL ri; /* INITAL SOURCE RADIUS */
 #endif
 #ifdef ANGLE_FROM_NA
-    REAL cna; /* NUMERICAL APERTURE FOR CALCULATING ANGLE */
+    REAL haa; /* HALF ANGLE OF ACCEPTANCE (RAD) FOR CALCULATING ANGLE */
 #endif
     
     REAL *II, IIout[2]; /* FOR STORING THE 2-PT FLUENCE, IIout is for outside the II range */
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 #endif
     ASSERT(fscanf(fp, READ_THREE_REALS, &cxi, &cyi, &czi) != 3); /* INITIAL DIRECTION OF PHOTON */
 #ifdef ANGLE_FROM_NA
-    ASSERT(fscanf(fp, READ_ONE_REAL, &cna) != 1); /* NUMERICAL APERTURE OF PHOTON */
+    ASSERT(fscanf(fp, READ_ONE_REAL, &haa) != 1); /* HALF ANGLE OF ACCEPTANCE FOR NA */
 #endif
     ASSERT(fscanf(fp, READ_THREE_REALS, &minT, &maxT, &stepT) != 3); /* MIN, MAX, STEP TIME FOR RECORDING */
     ASSERT(fscanf(fp, "%d %d", &nA1step, &nA3step) != 2); /* NUMBER OF ANGULAR STEPS FOR II */
@@ -362,9 +362,9 @@ int main(int argc, char *argv[])
 #endif
         
 #ifdef ANGLE_FROM_NA
-        if (cna > 0) {
+        if (haa > 0) {
             /* LAUNCH WITHIN A SPECIFIC NA ALONG Z-AXIS */
-            tmc_perturb_angle(&c1, &c2, &c3, cna);
+            tmc_perturb_angle(&c1, &c2, &c3, haa);
         }
 #endif
         
@@ -641,7 +641,7 @@ void tmc_random_in_radius(REAL *x, REAL *y, REAL *z, const REAL c1, const REAL c
 
 #ifdef ANGLE_FROM_NA
 /* [cx, cy, cz] has norm 1, this must be preserved during perturbation */
-void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL cna) {
+void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL haa) {
     /* TODO: use orthogonal vector to c1, c2, c3 */
     /* for now, hard code */
     
@@ -652,7 +652,7 @@ void tmc_perturb_angle(REAL *cx, REAL *cy, REAL *cz, const REAL cna) {
     rnm2 = RANDF();
     *cx = sqrt(-2.0 * logf(rnm1)) * cos(2.0 * M_PI * rnm2);
     *cy = sqrt(-2.0 * logf(rnm1)) * sin(2.0 * M_PI * rnm2);
-    *cz = 1.0 / tan(cna);
+    *cz = 1.0 / tan(haa);
     
     /* NORMALIZE THE DIRECTION COSINE OF THE SOURCE */
     norm = sqrt((*cx * *cx) + (*cy * *cy) + (*cz * *cz));

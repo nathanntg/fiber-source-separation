@@ -1,8 +1,11 @@
 % load configuration
-config = load_configuration('fiber-exc.inp');
+config = load_configuration('fiber-fluor.inp');
 
 % load sensitivity profile
-[I, IoOut] = load_sensitivity_profile('fiber-exc.2pt', config);
+[I, IoOut] = load_sensitivity_profile('fiber-fluor.2pt', config);
+
+% save for faster loading
+save('fiber-fluor.mat', '-v7.3', 'I', 'config');
 
 % get slice through source position
 iFy = round(config.initial_position(2) * size(I, 2));
