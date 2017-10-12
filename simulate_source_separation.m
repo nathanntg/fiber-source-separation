@@ -49,8 +49,14 @@ if realistic
         profile = sp_geometric();
     end
     [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, profile, 'figures', false, 'stats', false);
+    
+    % remove unused cells
+    m = m(:, any(m > 0, 1));
 else
     m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
+    
+    % remove unused cells
+    m = m(:, any(m > 0, 1));
 end
 
 if ~isempty(smooth_mixing)
