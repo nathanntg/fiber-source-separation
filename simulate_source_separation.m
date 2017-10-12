@@ -52,6 +52,7 @@ if realistic
     
     % remove unused cells
     m = m(:, any(m > 0, 1));
+    number_of_inputs = size(m, 2);
 else
     m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
     
