@@ -48,3 +48,10 @@ close all;
 explore({'realistic', true}, 'number_of_outputs', 100:100:1200, 'duration', 1000:1000:15000, 3);
 print(gcf, 'input-duration.png', '-dpng', '-r300');
 close all;
+
+%% SECNARIO 8: realistic ICA mode
+profile = sp_model('sensitivity-profile/fiber-exc.mat');
+profile = sp_3d_to_2d(profile); % symmetric, way faster
+explore({'realistic', true, 'number_of_outputs', 250, 'duration', 2500, 'profile', profile}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
+print(gcf, 'ica-g.png', '-dpng', '-r300');
+close all;

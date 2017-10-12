@@ -90,9 +90,16 @@ if nargout < 1 && ~detailed
         ylabel(strrep(param_a_name, '_' ,' '));
         colorbar;
     else
-        bar(param_a_values, output);
+        bar(mean(output, 3));
+        set(gca, 'XTickLabel', param_a_values);
         xlabel(strrep(param_a_name, '_' ,' '));
-        ylabel('Average correlation');
+        ylabel('Accuracy of source separation');
+        
+        figure;
+        boxplot(squeeze(output)');
+        set(gca, 'XTickLabel', param_a_values);
+        xlabel(strrep(param_a_name, '_' ,' '));
+        ylabel('Accuracy of source separation');
     end
 end
 
