@@ -43,7 +43,7 @@ xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - 1 fiber');
 
 %% average over multiple single fibers
 iter = 50;
-number = 150;
+number = 100;
 ss = zeros(iter, number);
 a = [];
 for i = 1:iter
@@ -58,8 +58,8 @@ xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - average per 
 
 %% plot distributions for multiple fibers
 rng(0);
-number = 100;
-[m_exc, ~] = generate_realistic_mixing(number, profile_exc, 'figures', false);
+number = 1000;
+[m_exc, ~, cells] = generate_realistic_mixing(number, profile_exc, 'figures', false);
 
 % nice plot
 figure;
@@ -91,6 +91,74 @@ plot(sort(kurtosis(m_exc, 0, 1), 'descend')); title('Kurtosis');
 figure;
 plot(sort(skewness(m_exc, 0, 1), 'descend')); title('Skewness');
 
+%% signal to background
+signal = max(m_exc, [], 2);
+background = sum(m_exc, 2) - signal;
+
+% depths - scatter plot
+[~, clearest_cell] = max(m_exc, [], 2);
+s_signal = max(m_exc, [], 1);
+figure;
+depths = cells(3, unique(clearest_cell));
+scatter(depths, s_signal(unique(clearest_cell)));
+xlabel('Depth ({\mu})'); ylabel('Visibility');
+title('Most Visible Neurons');
+
+% depths - scatter plot
+figure;
+scatter(cells(3, :), s_signal);
+xlabel('Depth ({\mu})'); ylabel('Visibility');
+title('All Neurons');
+
+% depth vs ratio - scatter plot
+depths = [];
+s_cbr = signal ./ background;
+s2_cbr = [];
+for j = unique(clearest_cell(:)')
+    depths = [depths cells(3, j)];
+    s2_cbr = [s2_cbr max(s_cbr(clearest_cell == j))];
+end
+figure;
+scatter(depths, s2_cbr);
+xlabel('Depth ({\mu})'); ylabel('Contrast to Background Ratio');
+
+% distribution
+figure;
+[f, x] = cecdf(s_cbr);
+plot(x, f);
+xlabel('Contrast to Background Ratio (signal / background)');
+%legend('Fiber', 'Microscope', 'Location', 'SouthEast');
+
+%% explore unique cells
+number = [100 200 500 1000 2000 5000];
+brightest = [];
+for j = number
+    rng(0);
+    [m_exc, ~, ~] = generate_realistic_mixing(j, profile_exc, 'figures', false, 'stats', false);
+    [~, clearest_cell] = max(m_exc, [], 2);
+    brightest = [brightest length(unique(clearest_cell))];
+end
+figure;
+scatter(number, brightest);
+xlabel('Number of Fibers'); ylabel('Number of Bright Unique Neurons');
+
+% adjust distribution
+number = [100 200 500 1000 2000 5000];
+brightest = [];
+for j = number
+    rng(0);
+    [m_exc, ~, ~] = generate_realistic_mixing(j, profile_exc, 'fiber_distribution', [sqrt(j) * 5 0 0; 0 sqrt(j) * 5 0; 0 0 15], 'figures', false, 'stats', false);
+    [~, clearest_cell] = max(m_exc, [], 2);
+    brightest = [brightest length(unique(clearest_cell))];
+end
+figure;
+scatter(number, brightest);
+xlabel('Number of Fibers'); ylabel('Number of Bright Unique Neurons');
+
+%figure;
+%plot(number, brightest, number1, brightest1, number2, brightest2);
+%xlabel('Number of Fibers / Pixels'); ylabel('Number of Bright Unique Neurons');
+%legend('Fibers', 'Fibers (constant splay)', 'Microscope', 'Location', 'SouthEast');
 
 %% explore number
 areas = [50 125 200 275 350 425 500]; % SD
@@ -125,7 +193,9 @@ figure;
 plot(numbers, seen_well_multiple);
 title(sprintf('Cells seen well by 2+ fibers (normalized fluence > %d%%)', well * 100));
 h = legend(num2str(areas'), 'Location', 'bestoutside');
-title(h, 'SD of Splay ({\sigma})');
+title(h, 'SD of Splay ({\mu}m)');
+xlabel('Number of fibers');
+ylabel('Number of neurons');
 
 figure;
 plot(numbers, seen_well_aggregate);
