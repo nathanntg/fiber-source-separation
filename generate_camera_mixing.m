@@ -88,7 +88,7 @@ for i = 1:num_pixels
 end
 
 % remove unused cells
-m = m(:, any(m > 0, 1));
+%m = m(:, any(m > 0, 1));
 num_inputs = size(m, 2);
 
 %% SUMMARY
