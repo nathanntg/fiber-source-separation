@@ -185,7 +185,7 @@ for i = 1:length(numbers)
         rng(0);
         [fibers, fiber_angles] = generate_fibers(numbers(i), 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15]);
         cells = generate_cells();
-        [m, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+        m = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
 
         seen(i, j) = size(m, 2);
         seen_well(i, j) = sum(max(m, [], 1) > well);

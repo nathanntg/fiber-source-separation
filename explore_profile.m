@@ -37,7 +37,7 @@ axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
 rng(0);
 [fibers, fiber_angles] = generate_fibers(1);
 cells = generate_cells();
-[m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
+m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
 s = sort(m_exc, 'descend');
 figure;
 bar(s(1:150)); xlim([0 150]);
@@ -51,7 +51,7 @@ a = [];
 for i = 1:iter
     [fibers, fiber_angles] = generate_fibers(1);
     cells = generate_cells();
-    [m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     s = sort(m_exc, 'descend');
     ss(i, :) = s(1:number);
     a = [a sum(s > 0.1)];
@@ -65,7 +65,7 @@ rng(0);
 number = 1000;
 [fibers, fiber_angles] = generate_fibers(number);
 cells = generate_cells();
-[m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
+m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
 
 % nice plot
 figure;
@@ -142,7 +142,7 @@ for j = number
     rng(0);
     [fibers, fiber_angles] = generate_fibers(j);
     cells = generate_cells();
-    [m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     [~, clearest_cell] = max(m_exc, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
@@ -157,7 +157,7 @@ for j = number
     rng(0);
     [fibers, fiber_angles] = generate_fibers(j, 'fiber_distribution', [sqrt(j) * 5 0 0; 0 sqrt(j) * 5 0; 0 0 15]);
     cells = generate_cells();
-    [m_exc, ~, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     [~, clearest_cell] = max(m_exc, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
@@ -184,7 +184,7 @@ for i = 1:length(numbers)
         rng(0);
         [fibers, fiber_angles] = generate_fibers(numbers(i), 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15]);
         cells = generate_cells();
-        [m, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+        m = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
 
         seen(i, j) = size(m, 2);
         seen_well(i, j) = sum(max(m, [], 1) > well);

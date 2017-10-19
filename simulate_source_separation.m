@@ -52,7 +52,9 @@ if realistic
         profile = sp_geometric();
     end
     
-    [m, number_of_inputs] = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
+    m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
+    number_of_inputs = size(m, 2);
+    
     
     % remove unused cells
     m = m(:, any(m > 0, 1));
