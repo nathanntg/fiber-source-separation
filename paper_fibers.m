@@ -129,7 +129,7 @@ mn = min(camera_depth); mx = max(camera_depth);
 [count, edges] = histcounts(camera_depth, bins);
 
 figure;
-h1 = plot(camera_depth, camera_vis * 100, '*');
+h1 = plot(camera_depth, camera_vis * 100, '.', 'MarkerSize', 25);
 xlabel('Depth [{\mu}]'); xlim([0 80]); xticks([0 40 80]);
 ylabel('Visibility [%]'); yticks([0 50 100]);
 
@@ -147,18 +147,18 @@ mn = min(fiber_depth); mx = max(fiber_depth);
 [count, edges] = histcounts(fiber_depth, bins);
 
 figure;
-h1 = plot(fiber_depth, fiber_vis * 100, '*');
-xlabel('Depth [{\mu}]'); xlim([180 300]); xticks([180 240 300]);
+c = 200;
+h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 25);
+xlabel('Depth [{\mu}]'); xlim([180 300] - c); xticks([180 220 260 300] - c);
 ylabel('Visibility [%]'); yticks([0 50 100]);
 ylim([0 120]);
 
-c = 200;
 r = ylim();
-line(c * [1 1], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
-text(c, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'Rotation', 90);
+line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
+text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'Rotation', 90);
 
 yyaxis right;
-h2 = plot(edges(2:end), count);
+h2 = plot(edges(2:end) - c, count);
 ylim([0 80]); yticks([0 40 80]);
 set(gca, 'YColor', [0 0 0]);
 
