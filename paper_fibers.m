@@ -4,15 +4,20 @@ set(0, 'DefaultAxesLineWidth', 2);
 set(0, 'DefaultLineLineWidth', 4);
 set(0, 'DefaultAxesFontSize', 24);
 
-%% profile
+%% load profiles
 % excitation
-camera_profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
-camera_profile_exc = sp_3d_to_2d(camera_profile_exc); % symmetric, way faster
+fiber_profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
+fiber_profile_exc = sp_3d_to_2d(fiber_profile_exc); % symmetric, way faster
 
-im = [camera_profile_exc.volume(end:-1:2, :); camera_profile_exc.volume];
-y = [-1 * camera_profile_exc.r(end:-1:2) camera_profile_exc.r];
+% emission
+fiber_profile_emi = sp_model('sensitivity-profile/fiber-fluor.mat');
+fiber_profile_emi = sp_3d_to_2d(fiber_profile_emi); % symmetric, way faster
+
+%% generate profile
+im = [fiber_profile_exc.volume(end:-1:2, :); fiber_profile_exc.volume];
+y = [-1 * fiber_profile_exc.r(end:-1:2) fiber_profile_exc.r];
 figure;
-imagesc(camera_profile_exc.z, y, log10(im), [-4 0]);
+imagesc(fiber_profile_exc.z, y, log10(im), [-4 0]);
 %title('Excitation profile');
 axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
 xlim([-75 675]); ylim([-375 375]); axis square;
@@ -22,96 +27,36 @@ colormap('jet');
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/profile.eps'); close;
 
-%% simulate: camera
-% excitation
-camera_profile_exc = sp_model('sensitivity-profile/camera-exc.mat');
-camera_profile_exc = sp_3d_to_2d(camera_profile_exc); % symmetric, way faster
-
-% generate mixing
-camera_width = 64; camera_height = 48;
-camera_number = camera_width * camera_height;
-old_rng = rng(0);
-[camera_mix, ~, camera_cells] = generate_camera_mixing(camera_width, camera_height, camera_profile_exc, 'figures', false);
-rng(old_rng);
-
-% useful values
-camera_signal = max(camera_mix, [], 2);
-camera_background = sum(camera_mix, 2) - camera_signal;
-
-
 %% simulate: fibers
-% excitation
-fiber_profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
-fiber_profile_exc = sp_3d_to_2d(fiber_profile_exc); % symmetric, way faster
-
 % generate mixing
-fiber_number = camera_number;
+fiber_number = 3000;
 old_rng = rng(0);
-[fiber_mix, ~, fiber_cells] = generate_realistic_mixing(fiber_number, fiber_profile_exc, ...
-    'figures', false, 'fiber_distribution', [250 0 0; 0 250 0; 0 0 30]);
+volume = [1200; 1200; 600];
+[fibers, fiber_angles] = generate_fibers(fiber_number, ...
+    'fiber_distribution', [250 0 0; 0 250 0; 0 0 30], ...
+    'position', [0.5; 0.5; 25], 'volume', volume);
+fiber_cells = generate_cells('volume', volume);
+fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
+    fiber_profile_exc, fiber_profile_emi, ...
+    'figures', false);
 rng(old_rng);
 
 % useful values
 fiber_signal = max(fiber_mix, [], 2);
 fiber_background = sum(fiber_mix, 2) - fiber_signal;
 
-%% camera simulated image
-% clearest neurons
-[value, clearest_cell] = max(camera_mix, [], 2);
-[~, ~, clearest_num] = unique(clearest_cell);
-im = label2rgb(reshape(clearest_num, camera_height, camera_width), 'lines');
-
-% figure w/o alpha
-figure;
-image(im);
-axis xy; xticks([]); yticks([]);
-
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/camera-cells.eps'); close;
-
-% figure w/ alpha
-im_alpha = mat2gray(reshape(value, camera_height, camera_width));
-im_composite = mat2gray(im) .* repmat(im_alpha, 1, 1, 3);
-figure;
-image(im_composite);
-axis xy; xticks([]); yticks([]);
-
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/camera-cells-composite.eps'); close;
-
-%% camera cbr
-% make histograms
-bins = 41;
-mx = max(max(camera_signal ./ camera_background), max(fiber_signal ./ fiber_background));
-edges = linspace(0, mx, bins);
-camera_cbr = histcounts(camera_signal ./ camera_background, edges);
-fiber_cbr = histcounts(fiber_signal ./ fiber_background, edges);
-
-figure;
-plot(edges(2:end), camera_cbr, edges(2:end), fiber_cbr);
-xticks([0 0.05 0.1]); xlabel('Contrast to background ratio');
-yticks([]); ylabel('Proportion'); % of pixels & fibers');
-legend('Camera pixel', 'Fiber', 'Location', 'NorthEast');
-
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/cbr.eps'); close;
+%% simulate: chr2
+old_rng = rng(0);
+[~, chr2_exc_cells, chr2_exc_fibers] = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
+    fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
+chr2_exc_cells = chr2_exc_cells ./ max(chr2_exc_fibers); % normalize
+rng(old_rng);
 
 %% depths
-threshold = 0.05; % 0.05;
-
-% camera
-camera_depth = [];
-camera_cbr = [];
-camera_vis = [];
-%cbr = camera_signal ./ camera_background;
-%[~, clearest_cell] = max(camera_mix, [], 2);
-%for j = unique(clearest_cell(:)')
-for j = find(max(camera_mix, [], 1) > threshold)
-    camera_depth = [camera_depth camera_cells(3, j)];
-    camera_vis = [camera_vis max(camera_mix(:, j))];
-    %camera_cbr = [camera_cbr max(cbr(clearest_cell == j))];
-end
+threshold = 0.01; % 0.05;
 
 % fiber
 fiber_depth = [];
-fiber_cbr = [];
 fiber_vis = [];
 %cbr = fiber_signal ./ fiber_background;
 %[~, clearest_cell] = max(fiber_mix, [], 2);
@@ -122,48 +67,62 @@ for j = find(max(fiber_mix, [], 1) > threshold)
     %fiber_cbr = [fiber_cbr max(cbr(clearest_cell == j))];
 end
 
+% chr2
+chr2_depth = [];
+chr2_vis = [];
+for j = find(chr2_exc_cells > threshold)
+    chr2_depth = [chr2_depth fiber_cells(3, j)];
+    chr2_vis = [chr2_vis chr2_exc_cells(j)];
+end
+
+
+h = figure;
+h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2 h.Position(4)];
+
+% plot fiber
 bins = 9;
+subplot(1, 2, 1);
 
-% plot separately: camera
-mn = min(camera_depth); mx = max(camera_depth);
-[count, edges] = histcounts(camera_depth, bins);
+[count, edges] = histcounts(fiber_depth, bins);
 
-figure;
-h1 = plot(camera_depth, camera_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([0 80]); xticks([0 40 80]);
-ylabel('Visibility [%]'); yticks([0 50 100]);
+c = 25;
+h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 25);
+xlabel('Depth [{\mu}]'); xlim([-10 100]); xticks([0 30 60 90]);
+ylabel('Fluorescence yield [% of max]'); yticks([0 50 100]);
+ylim([0 130]);
+
+r = ylim();
+line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
+text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'top', 'Rotation', 90);
 
 yyaxis right;
-h2 = plot(edges(2:end), count);
-ylim([0 40]); yticks([0 20 40]);
+h2 = plot(edges(2:end) - c, count);
+ylim([0 40]); yticks([0 15 30]);
 set(gca, 'YColor', [0 0 0]);
 
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/depth-camera.eps'); close;
+% plot chr2
+bins = 19;
+subplot(1, 2, 2);
 
-% plot separately: fiber
-mn = min(fiber_depth); mx = max(fiber_depth);
-[count, edges] = histcounts(fiber_depth, bins);
+[count, edges] = histcounts(chr2_depth, bins);
 
-figure;
-c = 200;
-h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([180 300] - c); xticks([180 220 260 300] - c);
-ylabel('Visibility [%]'); yticks([0 50 100]);
-ylim([0 120]);
+c = 25;
+h1 = plot(chr2_depth - c, chr2_vis * 100, '.', 'MarkerSize', 25);
+xlabel('Depth [{\mu}]'); xlim([-10 510]); xticks(0:125:500);
+ylabel('Excitation [% of max]'); yticks([0 50 100]);
+ylim([0 130]);
 
 r = ylim();
 line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
-text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'Rotation', 90);
+text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'top', 'Rotation', 90);
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
-ylim([0 80]); yticks([0 40 80]);
+ylim([0 1000]); yticks([0 350 700]);
 set(gca, 'YColor', [0 0 0]);
 
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/depth-fiber.eps'); close;
-
-
