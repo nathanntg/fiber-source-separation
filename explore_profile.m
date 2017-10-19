@@ -35,7 +35,9 @@ axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
 
 %% plot distributions for single fibers
 rng(0);
-[m_exc, ~] = generate_realistic_mixing(1, profile_exc, 'figures', false);
+[fibers, fiber_angles] = generate_fibers(1);
+cells = generate_cells();
+[m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
 s = sort(m_exc, 'descend');
 figure;
 bar(s(1:150)); xlim([0 150]);
@@ -47,7 +49,9 @@ number = 100;
 ss = zeros(iter, number);
 a = [];
 for i = 1:iter
-    [m_exc, ~] = generate_realistic_mixing(1, profile_exc, 'figures', false, 'stats', false);
+    [fibers, fiber_angles] = generate_fibers(1);
+    cells = generate_cells();
+    [m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     s = sort(m_exc, 'descend');
     ss(i, :) = s(1:number);
     a = [a sum(s > 0.1)];
@@ -59,7 +63,9 @@ xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - average per 
 %% plot distributions for multiple fibers
 rng(0);
 number = 1000;
-[m_exc, ~, cells] = generate_realistic_mixing(number, profile_exc, 'figures', false);
+[fibers, fiber_angles] = generate_fibers(number);
+cells = generate_cells();
+[m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
 
 % nice plot
 figure;
@@ -134,7 +140,9 @@ number = [100 200 500 1000 2000 5000];
 brightest = [];
 for j = number
     rng(0);
-    [m_exc, ~, ~] = generate_realistic_mixing(j, profile_exc, 'figures', false, 'stats', false);
+    [fibers, fiber_angles] = generate_fibers(j);
+    cells = generate_cells();
+    [m_exc, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     [~, clearest_cell] = max(m_exc, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
@@ -147,7 +155,9 @@ number = [100 200 500 1000 2000 5000];
 brightest = [];
 for j = number
     rng(0);
-    [m_exc, ~, ~] = generate_realistic_mixing(j, profile_exc, 'fiber_distribution', [sqrt(j) * 5 0 0; 0 sqrt(j) * 5 0; 0 0 15], 'figures', false, 'stats', false);
+    [fibers, fiber_angles] = generate_fibers(j, 'fiber_distribution', [sqrt(j) * 5 0 0; 0 sqrt(j) * 5 0; 0 0 15]);
+    cells = generate_cells();
+    [m_exc, ~, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
     [~, clearest_cell] = max(m_exc, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
@@ -172,7 +182,9 @@ condition = zeros(length(numbers), length(areas));
 for i = 1:length(numbers)
     for j = 1:length(areas)
         rng(0);
-        [m, ~] = generate_realistic_mixing(numbers(i), profile_exc, 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15], 'figures', false, 'stats', false);
+        [fibers, fiber_angles] = generate_fibers(numbers(i), 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15]);
+        cells = generate_cells();
+        [m, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
 
         seen(i, j) = size(m, 2);
         seen_well(i, j) = sum(max(m, [], 1) > well);

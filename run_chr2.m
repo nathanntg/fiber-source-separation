@@ -1,5 +1,7 @@
 % generate mixing matrix
-m = generate_realistic_mixing(100);
+[fibers, fiber_angles] = generate_fibers(100);
+cells = generate_cells();
+m = generate_realistic_mixing(fibers, fiber_angles, cells);
 
 % total optical power to each cell
 power_total = sum(m, 1);

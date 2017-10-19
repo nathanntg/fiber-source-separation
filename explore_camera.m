@@ -183,7 +183,9 @@ condition = zeros(length(numbers), length(areas));
 for i = 1:length(numbers)
     for j = 1:length(areas)
         rng(0);
-        [m, ~] = generate_realistic_mixing(numbers(i), profile_exc, 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15], 'figures', false, 'stats', false);
+        [fibers, fiber_angles] = generate_fibers(numbers(i), 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15]);
+        cells = generate_cells();
+        [m, ~] = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
 
         seen(i, j) = size(m, 2);
         seen_well(i, j) = sum(max(m, [], 1) > well);

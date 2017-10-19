@@ -1,30 +1,7 @@
-function [m, num_inputs, cells] = generate_realistic_mixing(num_fibers, profile, varargin)
+function [m, num_inputs] = generate_realistic_mixing(fibers, fiber_angles, cells, profile, varargin)
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers
-
-% Size of the brain tissue volume being simulated
-% from Bottjer el al 1985
-% Area X is 2.262 mm^3
-% assuming sphere, that works out to a radius of 814.3
-% use slightly smaller X and Y dimensions
-volume = [1200; 1200; 400]; % microns
-
-% Density of cells to be simulated
-% from Walton et al 2012, based on excitatory cells in HVC
-% 275,000 per mm^3
-cell_density = 0.000275; % cells per micron cubed
-
-% Virus efficacy (adjusts cell density)
-viral_efficacy = 1;
-
-% Distribution of fibers is assumed to be normal
-% LNY 63 has bivariate 49.7-95.4 micron standard deviation (assuming
-% independent), use slightly larger for more fibers
-fiber_distribution = [125 0 0; 0 125 0; 0 0 15]; % microns
-
-% angle of fibers, in degrees
-angle_distribution = [5 0; 0 5];
 
 % fiber width
 fiber_diameter = 8;
@@ -46,32 +23,10 @@ for i = 1:2:nparams
     eval([nm ' = varargin{i+1};']);
 end
 
-if isscalar(fiber_distribution)
-    fiber_distribution = [1 0 0; 0 1 0; 0 0 0.12] * fiber_distribution;
-end
-
 %% GENERATE SPACE
 
-% number of cells
-num_cells = round(prod(volume) * cell_density * viral_efficacy);
-
-% cells are uniformly located throughout the space
-cells = bsxfun(@times, rand(3, num_cells), volume);
-
-% sanity check fiber count
-fibers_1sd = num_fibers * 0.682; % number of fibers in 1 standard deviation
-fiber_area_1sd = fibers_1sd * pi * (fiber_diameter / 2) ^ 2; % area of all the fibers
-area_1sd = pi * fiber_distribution(1, 1) * fiber_distribution(2, 2); % only handles independent bivariate
-circle_packing = 0.9069;
-if fiber_area_1sd > (circle_packing * area_1sd)
-    warning('Based on circle packing and the fiber density, the maximum number of fibers is %d.', round((circle_packing * area_1sd) / (pi * (fiber_diameter / 2) ^ 2)));
-end
-
-% fibers are dsitributed with a multivariate normal distribution
-% assume targeted to centers
-fibers = mvnrnd(volume ./ 2, fiber_distribution, num_fibers)';
-fiber_angles = deg2rad(mvnrnd([0, 0], angle_distribution, num_fibers))';
-
+num_fibers = size(fibers, 2);
+num_cells = size(cells, 2);
 
 % make scatter histogram
 if figures
@@ -99,8 +54,6 @@ for i = 1:num_fibers
     m(i, :) = cur;
 end
 
-% remove unused cells
-%m = m(:, any(m > 0, 1));
 num_inputs = size(m, 2);
 
 %% SUMMARY

@@ -45,10 +45,14 @@ end
 
 %% GENERATE MIXING MATRIX
 if realistic
+    % prepare profile and other parameters
+    [fibers, fiber_angles] = generate_fibers(number_of_outputs);
+    cells = generate_cells();
     if isempty(profile)
         profile = sp_geometric();
     end
-    [m, number_of_inputs] = generate_realistic_mixing(number_of_outputs, profile, 'figures', false, 'stats', false);
+    
+    [m, number_of_inputs] = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
     
     % remove unused cells
     m = m(:, any(m > 0, 1));
