@@ -1,4 +1,4 @@
-function [m, num_inputs] = generate_realistic_mixing(fibers, fiber_angles, cells, profile, varargin)
+function m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, varargin)
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers
