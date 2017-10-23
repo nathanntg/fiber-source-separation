@@ -1,7 +1,10 @@
-function [m, exc_cells, exc_fibers] = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_emi, varargin)
+function [m, exc_cells, exc_fibers_max] = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_emi, varargin)
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers
+
+% should normalize by max excitation
+normalize = false;
 
 % which fibers are used for excitaiton and which fibers are used for
 % emissions
@@ -47,11 +50,12 @@ if figures
 end
 
 %% APPLY EXCITATION PROFILE
-exc_fibers = zeros(1, num_fibers); % how much light is at tip of each fiber (used for normalization)
+fibers_max = max_profile_intensity(fibers, fiber_angles, profile_exc);
+exc_fibers_max = zeros(1, num_fibers); % how much light is at tip of each fiber (used for normalization)
 exc_cells = zeros(1, num_cells); % how much light reaches each cell
 for i = fibers_exc
     % get relative fiber positions
-    fibers_rel = bsxfun(@minus, fibers, fibers(:, i));
+    fibers_max_rel = bsxfun(@minus, fibers_max, fibers(:, i));
     
     % get relative cell positions
     cells_rel = bsxfun(@minus, cells, fibers(:, i));
@@ -60,12 +64,12 @@ for i = fibers_exc
     theta = fiber_angles(:, i); % angle
     r = [1 0 0; 0 cos(theta(1)) -sin(theta(1)); 0 sin(theta(1)) cos(theta(1))]; % x
     r = [cos(theta(2)) 0 sin(theta(2)); 0 1 0; -sin(theta(2)) 0 cos(theta(2))] * r; % y
-    fibers_rel = r * fibers_rel; % rotate fibers
+    fibers_max_rel = r * fibers_max_rel; % rotate fibers
     cells_rel = r * cells_rel; % rotate cells
     
     % apply profile to fibers
-    cur = apply_profile(profile_exc, fibers_rel);
-    exc_fibers = exc_fibers + cur;
+    cur = apply_profile(profile_exc, fibers_max_rel);
+    exc_fibers_max = exc_fibers_max + cur;
     
     % apply profile to cells
     cur = apply_profile(profile_exc, cells_rel);
@@ -92,8 +96,13 @@ for i = fibers_emi
 end
 
 % total = excitation * emission
-normalize = max(exc_fibers); % brighest point (at tip of fibers)
-m = bsxfun(@times, m, exc_cells ./ normalize);
+if normalize
+    d = exc_cells ./ max(exc_fibers_max); % brighest point (at tip of fibers)
+else
+    d = exc_cells;
+end
+m = bsxfun(@times, m, d);
+
 
 %% SUMMARY
 if stats

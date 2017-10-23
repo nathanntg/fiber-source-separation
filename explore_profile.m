@@ -37,73 +37,85 @@ axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
 rng(0);
 [fibers, fiber_angles] = generate_fibers(1);
 cells = generate_cells();
-m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
-s = sort(m_exc, 'descend');
+m_rt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false);
+s = sort(m_rt, 'descend');
 figure;
 bar(s(1:150)); xlim([0 150]);
 xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - 1 fiber');
 
 %% average over multiple single fibers
 iter = 50;
-number = 100;
+number = 25;
 ss = zeros(iter, number);
 a = [];
 for i = 1:iter
     [fibers, fiber_angles] = generate_fibers(1);
     cells = generate_cells();
-    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
-    s = sort(m_exc, 'descend');
+    m_rt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
+    s = sort(m_rt, 'descend');
     ss(i, :) = s(1:number);
     a = [a sum(s > 0.1)];
 end
 figure;
 bar(mean(ss)); xlim([0 number + 1]);
-xlabel('Neuron'); ylabel('Normalized Fluence'); title('Excitation - average per fiber');
+xlabel('Neuron'); ylabel('Fluoresence yield [frac. of fiber emission]'); title(sprintf('Round trip - avg per fiber (N = %d)', iter));
 
 %% plot distributions for multiple fibers
 rng(0);
-number = 1000;
+number = 500;
 [fibers, fiber_angles] = generate_fibers(number);
 cells = generate_cells();
-m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false);
+[m_rt, exc_cells] = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false);
 
 % nice plot
 figure;
-plot_mix(m_exc);
+plot_mix(m_rt);
 xlabel('Neuron');
-title(sprintf('Excitation - %d fibers', number));
+ylabel('Fluoresence yield [frac. of fiber emission]');
+title(sprintf('Round trip - %d fibers', number));
 
 % nice plot
 figure;
-plot_mix(m_exc, 'most-total', 500);
+plot_mix(m_rt, 'most-total', 500);
 xlabel('Neuron');
-title(sprintf('Excitation - %d fibers', number));
+ylabel('Fluoresence yield [frac. of fiber emission]');
+title(sprintf('Round trip - %d fibers', number));
+
+% excitation
+figure;
+e = sort(exc_cells, 'descend');
+bar(e(1:500));
+xlabel('Neuron');
+ylabel('Excitation [frac. of fiber emission]');
+title(sprintf('Total excitation - %d fibers', number));
 
 % nice plot 2
 figure;
-plot_mix(m_exc, 'most-single');
+plot_mix(m_rt, 'most-single');
 xlabel('Neuron');
-title(sprintf('Excitation - %d fibers', number));
+ylabel('Fluoresence yield [frac. of fiber emission]');
+title(sprintf('Round trip - %d fibers', number));
 
 % nice plot
 figure;
-plot_mix(m_exc', 'most-single', 100);
+plot_mix(m_rt', 'most-single', 100);
 xlabel('Fiber');
-title('Excitation');
+ylabel('Fluoresence yield [frac. of fiber emission]');
+title('Round trip');
 
 % plot kurtosis
 figure;
-plot(sort(kurtosis(m_exc, 0, 1), 'descend')); title('Kurtosis');
+plot(sort(kurtosis(m_rt, 0, 1), 'descend')); title('Kurtosis');
 figure;
-plot(sort(skewness(m_exc, 0, 1), 'descend')); title('Skewness');
+plot(sort(skewness(m_rt, 0, 1), 'descend')); title('Skewness');
 
 %% signal to background
-signal = max(m_exc, [], 2);
-background = sum(m_exc, 2) - signal;
+signal = max(m_rt, [], 2);
+background = sum(m_rt, 2) - signal;
 
 % depths - scatter plot
-[~, clearest_cell] = max(m_exc, [], 2);
-s_signal = max(m_exc, [], 1);
+[~, clearest_cell] = max(m_rt, [], 2);
+s_signal = max(m_rt, [], 1);
 figure;
 depths = cells(3, unique(clearest_cell));
 scatter(depths, s_signal(unique(clearest_cell)));
@@ -142,8 +154,8 @@ for j = number
     rng(0);
     [fibers, fiber_angles] = generate_fibers(j);
     cells = generate_cells();
-    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
-    [~, clearest_cell] = max(m_exc, [], 2);
+    m_rt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
+    [~, clearest_cell] = max(m_rt, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
 figure;
@@ -157,8 +169,8 @@ for j = number
     rng(0);
     [fibers, fiber_angles] = generate_fibers(j, 'fiber_distribution', [sqrt(j) * 5 0 0; 0 sqrt(j) * 5 0; 0 0 15]);
     cells = generate_cells();
-    m_exc = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
-    [~, clearest_cell] = max(m_exc, [], 2);
+    m_rt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
+    [~, clearest_cell] = max(m_rt, [], 2);
     brightest = [brightest length(unique(clearest_cell))];
 end
 figure;
@@ -184,7 +196,7 @@ for i = 1:length(numbers)
         rng(0);
         [fibers, fiber_angles] = generate_fibers(numbers(i), 'fiber_distribution', [areas(j) 0 0; 0 areas(j) 0; 0 0 15]);
         cells = generate_cells();
-        m = generate_realistic_mixing(fibers, fiber_angles, cells, profile_exc, 'figures', false, 'stats', false);
+        m = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
 
         seen(i, j) = size(m, 2);
         seen_well(i, j) = sum(max(m, [], 1) > well);
