@@ -38,7 +38,7 @@ volume = [1200; 1200; 600];
 fiber_cells = generate_cells('volume', volume);
 fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
     fiber_profile_exc, fiber_profile_emi, ...
-    'figures', false);
+    'normalize', true, 'figures', false);
 rng(old_rng);
 
 % useful values
@@ -48,7 +48,7 @@ fiber_background = sum(fiber_mix, 2) - fiber_signal;
 %% simulate: chr2
 old_rng = rng(0);
 [~, chr2_exc_cells, chr2_exc_fibers] = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
-    fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
+    fiber_profile_exc, fiber_profile_emi, 'normalize', true, 'figures', false, 'stats', false);
 chr2_exc_cells = chr2_exc_cells ./ max(chr2_exc_fibers); % normalize
 rng(old_rng);
 
@@ -77,11 +77,11 @@ end
 
 
 h = figure;
-h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2 h.Position(4)];
+h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2.1 h.Position(4) * 1.1];
 
 % plot fiber
 bins = 9;
-subplot(1, 2, 1);
+hs =subplot(1, 2, 2);
 
 [count, edges] = histcounts(fiber_depth, bins);
 
@@ -99,18 +99,24 @@ yyaxis right;
 h2 = plot(edges(2:end) - c, count);
 ylim([0 40]); yticks([0 15 30]);
 set(gca, 'YColor', [0 0 0]);
+h = ylabel('Number of neurons');
+h.Rotation = -90;
+h.VerticalAlignment = 'bottom';
 
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
 
+hs.Position(1) = hs.Position(1) + 0.03;
+hs.Position(2) = hs.Position(2) + 0.04;
+
 % plot chr2
 bins = 19;
-subplot(1, 2, 2);
+hs = subplot(1, 2, 1);
 
 [count, edges] = histcounts(chr2_depth, bins);
 
 c = 25;
 h1 = plot(chr2_depth - c, chr2_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([-10 510]); xticks(0:125:500);
+xlabel('Depth [{\mu}]'); xlim([-10 510]); xticks(0:150:450);
 ylabel('Excitation [% of max]'); yticks([0 50 100]);
 ylim([0 130]);
 
@@ -122,7 +128,13 @@ yyaxis right;
 h2 = plot(edges(2:end) - c, count);
 ylim([0 1000]); yticks([0 350 700]);
 set(gca, 'YColor', [0 0 0]);
+h = ylabel('Number of neurons');
+h.Rotation = -90;
+h.VerticalAlignment = 'bottom';
 
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
+
+hs.Position(1) = hs.Position(1) - 0.05;
+hs.Position(2) = hs.Position(2) + 0.04;
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/depth-fiber.eps'); close;
