@@ -1,5 +1,5 @@
 % stimulation threshold
-light_out = 0.4887; % uW out of the fiber
+light_out = 0.0544; % uW out of the fiber
 threshold = 5; % mW / mm^2
 
 % above stimulation threshold
