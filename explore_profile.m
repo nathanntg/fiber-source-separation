@@ -1,8 +1,8 @@
 %% setup
 % sizing
 set(0, 'DefaultAxesLineWidth', 2);
-set(0, 'DefaultLineLineWidth', 3);
-set(0, 'DefaultAxesFontSize', 16);
+set(0, 'DefaultLineLineWidth', 4);
+set(0, 'DefaultAxesFontSize', 24);
 
 % store random number seed
 old_rng = rng;

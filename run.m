@@ -45,13 +45,26 @@ print(gcf, 'smoothing-disk-square.png', '-dpng', '-r300');
 close all;
 
 %% SCENARIO 7: realistic output/duration
-explore({'realistic', true}, 'number_of_outputs', 100:100:1200, 'duration', 1000:1000:15000, 3);
+explore({'mode', 'profile'}, 'number_of_outputs', 100:100:1200, 'duration', 1000:1000:15000, 3);
 print(gcf, 'input-duration.png', '-dpng', '-r300');
 close all;
 
 %% SECNARIO 8: realistic ICA mode
 profile = sp_model('sensitivity-profile/fiber-exc.mat');
 profile = sp_3d_to_2d(profile); % symmetric, way faster
-explore({'realistic', true, 'number_of_outputs', 250, 'duration', 2500, 'profile', profile}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
+explore({'mode', 'profile', 'number_of_outputs', 250, 'duration', 2500, 'profile', profile}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
+print(gcf, 'ica-g.png', '-dpng', '-r300');
+close all;
+
+%% SECNARIO 9: realistic round-trip, ICA mode
+% excitation
+profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
+profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
+
+% fluorescence 
+profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
+profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
+
+explore({'mode', 'profile-rt', 'number_of_outputs', 250, 'duration', 2500, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
 print(gcf, 'ica-g.png', '-dpng', '-r300');
 close all;

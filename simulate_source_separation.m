@@ -12,26 +12,31 @@ waveform = exp(0:-0.75:-4); % the waveform measured from each spike
 amplitude = [1 2]; % either single value (all the same amplitude), or range (uniform), or callback
 
 % noise
-input_noise = @(n) normrnd(0, 0.125, 1, n); % either single value (0) or callback that generates noise
-output_noise = 0; % either single value (0) or callback that generates noise
+input_noise = 0; % either single value (0) or callback that generates noise
+input_noise_type = 'scale';
+output_noise = @(n) normrnd(0, 0.1, 1, n); % either single value (0) or callback that generates noise
+output_noise_type = 'scale';
 
 figures = true;
 
 % correlations
-smooth_input = [];
 smooth_mixing = []; % row: nearby inputs influence output; column: nearby outputs influence each other
 
 % mixing
-realistic = false;
-profile = [];
+mode = 'basic'; % basic, profile, profile-rt
+profile = []; % used for profile
+profile_exc = []; % used for profile-rt
+profile_fluor = []; % used for profile-rt
+
+% params fibers
+params_fibers = {};
+params_cells = {};
 
 % ICA
 g = 'skew';
 
-% TODO: write me
-
 %% LOAD PARAMETERS
-nparams=length(varargin);
+nparams = length(varargin);
 if 0 < mod(nparams, 2)
 	error('Parameters must be specified as parameter/value pairs');
 end
@@ -44,46 +49,58 @@ for i = 1:2:nparams
 end
 
 %% GENERATE MIXING MATRIX
-if realistic
-    % prepare profile and other parameters
-    [fibers, fiber_angles] = generate_fibers(number_of_outputs);
-    cells = generate_cells();
-    if isempty(profile)
-        profile = sp_geometric();
-    end
-    
-    m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
-    number_of_inputs = size(m, 2);
-    
-    
-    % remove unused cells
-    m = m(:, any(m > 0, 1));
-    number_of_inputs = size(m, 2);
-else
-    m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
-    
-    % remove unused cells
-    m = m(:, any(m > 0, 1));
+switch mode
+    case 'profile-rt'
+        % default profile (geometric)
+        if isempty(profile_exc)
+            profile_exc = sp_geometric();
+        end
+        if isempty(profile_fluor)
+            profile_fluor = profile_exc; % use same one
+        end
+        
+        % prepare profile and other parameters
+        [fibers, fiber_angles] = generate_fibers(number_of_outputs, params_fibers{:});
+        cells = generate_cells(params_cells{:});
+        m = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
+
+        % remove unused cells
+        m = m(:, any(m > 0, 1));
+        number_of_inputs = size(m, 2);
+        
+    case 'profile'
+        % default profile (geometric)
+        if isempty(profile)
+            profile = sp_geometric();
+        end
+        
+        % prepare profile and other parameters
+        [fibers, fiber_angles] = generate_fibers(number_of_outputs, params_fibers{:});
+        cells = generate_cells(params_cells{:});
+        m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
+
+        % remove unused cells
+        m = m(:, any(m > 0, 1));
+        number_of_inputs = size(m, 2);
+        
+    case 'basic'
+        m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
+
+        % remove unused cells
+        m = m(:, any(m > 0, 1));
+        
+    otherwise
+        error('Invalid mode: %s.', mode);
 end
 
 if ~isempty(smooth_mixing)
     m = filter2(smooth_mixing, m);
 end
 
-% show mixing matrix
-if figures
-    figure;
-    imagesc(m);
-    title('Mixing Matrix');
-    xlabel('Inputs');
-    ylabel('Outputs');
-    colorbar;
-end
-
 %% GENERATE INPUT
 s = generate_inputs(number_of_inputs, spike_probability, duration, waveform, amplitude);
 % TODO: add correlations to inputs
-s_noisy = add_noise(s, input_noise);
+s_noisy = add_noise(s, input_noise, input_noise_type);
 
 % show example
 if figures
@@ -105,7 +122,7 @@ end
 
 %% GENERATE OUTPUTS
 x = m * s_noisy;
-x_noisy = add_noise(x, output_noise);
+x_noisy = add_noise(x, output_noise, output_noise_type);
 if figures
     figure;
     subplot(3, 1, 1);
@@ -153,14 +170,6 @@ end
 %% ANALYZE RESULTS
 % score outcome
 rho = corr(s_noisy', s_hat');
-if figures
-    figure;
-    imagesc(rho);
-    title('Correlation between sources and extracted sources');
-    xlabel('Extracted source');
-    ylabel('Source');
-    colorbar;
-end
 
 % figure out best scores
 [scores, idx] = max(rho, [], 2);
