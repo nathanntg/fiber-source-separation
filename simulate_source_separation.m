@@ -1,14 +1,16 @@
 function [scores] = simulate_source_separation(varargin)
 
 % simulation settings
-duration = 1000; % number of samples
-spike_probability = 0.02; % ~1 spike per 50 units of time
+duration = 50; % seconds
+sps = 20; % samples per second
+spike_probability = 0.02; % 1 spike per 50 samples (2.5 seconds)
 number_of_inputs = 25; % n: sources or neurons
 number_of_outputs = 50; % m: number of distringuishable fibers
 % mixing matrix will m x n size
 
 % waveform (inputs are spike trains convolved with a waveform)
-waveform = exp(0:-0.75:-4); % the waveform measured from each spike
+waveform = 'gcamp6f'; % the waveform measured from each spike (vector or string)
+offset = [0.1 0.01]; % waveform offset (scalar = constant, pair of parameters [mu, sigma], or callback)
 amplitude = [1 2]; % either single value (all the same amplitude), or range (uniform), or callback
 
 % noise
@@ -47,6 +49,10 @@ for i = 1:2:nparams
     end
     eval([nm ' = varargin{i+1};']);
 end
+
+%% PREP WORK
+waveform = get_waveform(waveform, sps);
+duration_smp = round(sps * duration);
 
 %% GENERATE MIXING MATRIX
 switch mode
@@ -98,7 +104,7 @@ if ~isempty(smooth_mixing)
 end
 
 %% GENERATE INPUT
-s = generate_inputs(number_of_inputs, spike_probability, duration, waveform, amplitude);
+s = generate_inputs(number_of_inputs, spike_probability, duration_smp, waveform, offset, amplitude);
 % TODO: add correlations to inputs
 s_noisy = add_noise(s, input_noise, input_noise_type);
 
@@ -178,41 +184,43 @@ sorted_out = idx(sorted_in);
 if figures
     % plot best two
     figure;
+    nm = min(duration_smp, 300);
+    t = (1:nm) ./ sps;
     subplot(3, 3, 1);
-    plot(s(sorted_in(end), 1:200));
+    plot(t, s(sorted_in(end), 1:nm));
     title(sprintf('Source (s_{%d})', sorted_in(end)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 2);
-    plot(s_noisy(sorted_in(end), 1:200));
+    plot(t, s_noisy(sorted_in(end), 1:nm));
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(end)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 3);
-    plot(s_hat(sorted_out(end), 1:200));
+    plot(t, s_hat(sorted_out(end), 1:nm));
     title(sprintf('Separated Source (s_{%d})', sorted_out(end)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 4);
-    plot(s(sorted_in(end - 1), 1:200));
+    plot(t, s(sorted_in(end - 1), 1:nm));
     title(sprintf('Source (s_{%d})', sorted_in(end - 1)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 5);
-    plot(s_noisy(sorted_in(end - 1), 1:200));
+    plot(t, s_noisy(sorted_in(end - 1), 1:nm));
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(end - 1)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 6);
-    plot(s_hat(sorted_out(end - 1), 1:200));
+    plot(t, s_hat(sorted_out(end - 1), 1:nm));
     title(sprintf('Separated Source (s_{%d})', sorted_out(end - 1)));
     xlabel('Time'); ylabel('Trace');
     % plot worst
     subplot(3, 3, 7);
-    plot(s(sorted_in(1), 1:200));
+    plot(t, s(sorted_in(1), 1:nm));
     title(sprintf('Source (s_{%d})', sorted_in(1)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 8);
-    plot(s_noisy(sorted_in(1), 1:200));
+    plot(t, s_noisy(sorted_in(1), 1:nm));
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(1)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 9);
-    plot(s_hat(sorted_out(1), 1:200));
+    plot(t, s_hat(sorted_out(1), 1:nm));
     title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
     xlabel('Time'); ylabel('Trace');
     
@@ -237,7 +245,7 @@ if figures
         
         % colors
         clrs = lines(max(number_of_inputs, number_of_outputs));
-        t = 1:duration;
+        t = (1:duration_smp) ./ sps;
         
         figure;
         
