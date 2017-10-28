@@ -1,4 +1,4 @@
-function output = explore(params, param_a_name, param_a_values, param_b_name, param_b_values, iterations, detailed)
+function output = explore(params, param_a_name, param_a_values, param_b_name, param_b_values, iterations, detailed, metric)
 
 % params
 if isempty(params)
@@ -8,7 +8,7 @@ params = [params {'figures', false}];
 
 % defaults
 if ~exist('iterations', 'var') || isempty(iterations)
-    iterations = 10;
+    iterations = 5;
 end
 if nargin < 4 || isempty(param_b_name)
     is2D = false;
@@ -24,6 +24,17 @@ if detailed
     output = cell(length(param_a_values), length(param_b_values));
 else
     output = zeros(length(param_a_values), length(param_b_values), iterations);
+end
+
+if ~exist('metric', 'var') || isempty(metric)
+    metric = 0.5;
+else
+    if detailed
+        error('Metric only used if not detailed mode.');
+    end
+    if ischar(metric) && ~strcmp(metric', 'mean')
+        error('The only supported metrics are a threshold (scalar value) or "mean".');
+    end
 end
 
 % progress
@@ -51,8 +62,10 @@ for idx_a = 1:length(param_a_values)
             scores = simulate_source_separation(p{:});
             if detailed
                 output{idx_a, idx_b, i} = scores;
-            else
+            elseif ischar(scores) % mean
                 values(i) = mean(scores);
+            else
+                values(i) = sum(scores > metric);
             end
         end
         
