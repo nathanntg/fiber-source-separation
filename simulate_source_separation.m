@@ -112,16 +112,16 @@ s_noisy = add_noise(s, input_noise, input_noise_type);
 if figures
     figure;
     subplot(3, 1, 1);
-    plot(s_noisy(1, 1:200));
+    plot((1:200) ./ sps, s_noisy(1, 1:200));
     title('Example source traces');
     xlabel('Time');
     ylabel('Trace (s_1)');
     subplot(3, 1, 2);
-    plot(s_noisy(2, 1:200));
+    plot((1:200) ./ sps, s_noisy(2, 1:200));
     xlabel('Time');
     ylabel('Trace (s_2)');
     subplot(3, 1, 3);
-    plot(s_noisy(3, 1:200));
+    plot((1:200) ./ sps, s_noisy(3, 1:200));
     xlabel('Time');
     ylabel('Trace (s_3)');
 end
@@ -132,16 +132,16 @@ x_noisy = add_noise(x, output_noise, output_noise_type);
 if figures
     figure;
     subplot(3, 1, 1);
-    plot(x_noisy(1, 1:200)');
+    plot((1:200) ./ sps, x(1, 1:200)', (1:200) ./ sps, x_noisy(1, 1:200)');
     title('Example output traces');
     xlabel('Time');
     ylabel('Trace (x_1)');
     subplot(3, 1, 2);
-    plot(x_noisy(2, 1:200)');
+    plot((1:200) ./ sps, x(2, 1:200)', (1:200) ./ sps, x_noisy(2, 1:200)');
     xlabel('Time');
     ylabel('Trace (x_2)');
     subplot(3, 1, 3);
-    plot(x_noisy(3, 1:200)');
+    plot((1:200) ./ sps, x(3, 1:200)', (1:200) ./ sps, x_noisy(3, 1:200)');
     xlabel('Time');
     ylabel('Trace (x_3)');
 end

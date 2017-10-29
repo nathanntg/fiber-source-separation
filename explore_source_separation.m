@@ -14,7 +14,7 @@ profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
 % other settings
-duration = 5000;
+duration = 250; % 5,000 samples
 lm = 100;
 
 %% open figure
