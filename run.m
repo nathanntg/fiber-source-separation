@@ -1,62 +1,10 @@
-%% SCENARIO 1: input / output
-explore({}, 'number_of_inputs', 10:5:50, 'number_of_outputs', 10:5:75);
-print(gcf, 'input-output.png', '-dpng', '-r300');
-close all;
+%% setup
+% sizing
+set(0, 'DefaultAxesLineWidth', 2);
+set(0, 'DefaultLineLineWidth', 4);
+set(0, 'DefaultAxesFontSize', 24);
 
-%% SCENARIO 2: input / noise
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:5:50, 'input_noise', 0.1:0.15:0.90);
-print(gcf, 'input-noise.png', '-dpng', '-r300');
-close all;
-
-%% SCENARIO 3: input / duration
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:5:50, 'duration', 100:100:2000);
-print(gcf, 'input-duration.png', '-dpng', '-r300');
-close all;
-
-%% SCENARIO 4: noise / duration
-explore({'number_of_outputs', 25}, 'input_noise', 0.1:0.15:0.90, 'duration', 500:1500:10000);
-print(gcf, 'noise-duration.png', '-dpng', '-r300');
-close all;
-
-%% SCENARIO 5: noise / amplitude
-explore({'number_of_inputs', 25, 'number_of_outputs', 25}, 'input_noise', 0:0.25:2, 'amplitude', [1 2; 2 3; 4 5; 5 6; 7 8]);
-print(gcf, 'noise-amplitude.png', '-dpng', '-r300');
-close all;
-
-%% SCENARIO 6: smoothing
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', generate_smoothing(1, 1:9));
-print(gcf, 'smoothing-avg-row.png', '-dpng', '-r300');
-close all;
-
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', generate_smoothing(1:9, 1));
-print(gcf, 'smoothing-avg-column.png', '-dpng', '-r300');
-close all;
-
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', generate_smoothing(1:9, 1:9));
-print(gcf, 'smoothing-avg-square.png', '-dpng', '-r300');
-close all;
-
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', generate_smoothing(1:9, 1:9, @(n, m) fspecial('gaussian', [n m])));
-print(gcf, 'smoothing-gaus-square.png', '-dpng', '-r300');
-close all;
-
-explore({'number_of_outputs', 25}, 'number_of_inputs', 10:1:25, 'smooth_mixing', [{[]} generate_smoothing(3:2:9, 3:2:9, @(n, m) fspecial('disk', (n - 1) / 2))]);
-print(gcf, 'smoothing-disk-square.png', '-dpng', '-r300');
-close all;
-
-%% SCENARIO 7: realistic output/duration
-explore({'mode', 'profile'}, 'number_of_outputs', 100:100:1200, 'duration', 1000:1000:15000, 3);
-print(gcf, 'input-duration.png', '-dpng', '-r300');
-close all;
-
-%% SECNARIO 8: realistic ICA mode
-profile = sp_model('sensitivity-profile/fiber-exc.mat');
-profile = sp_3d_to_2d(profile); % symmetric, way faster
-explore({'mode', 'profile', 'number_of_outputs', 250, 'duration', 2500, 'profile', profile}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
-print(gcf, 'ica-g.png', '-dpng', '-r300');
-close all;
-
-%% SECNARIO 9: realistic round-trip, ICA mode
+%% load
 % excitation
 profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
 profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
@@ -65,6 +13,61 @@ profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
 profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
-explore({'mode', 'profile-rt', 'number_of_outputs', 250, 'duration', 2500, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
+%% SCRATCH PAD: OFFSET
+% effect of ofset
+%explore({'mode', 'profile-rt', 'number_of_outputs', 25, 'duration', 100, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'offset', {0, 0.1, [0.1 0.01], 1, [1 1.1]});
+
+%% SCRATCH PAD: WAVEFORM
+% effect of waveform
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 500}, 'waveform', {'gcamp6s', 'gcamp6m', 'gcamp6f'});
+print(gcf, 'waveform.png', '-dpng', '-r150');
+close all;
+
+%% SCRATCH PAD: OUTPUT NOISE TYPE
+% effect of waveform
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'output_noise_type', {'add', 'scale'});
+print(gcf, 'output_noise_type.png', '-dpng', '-r150');
+close all;
+
+%% SCRATCH PAD: DURATION
+% effect of waveform
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'duration', 50:50:300);
+print(gcf, 'duration.png', '-dpng', '-r150');
+close all;
+
+%% SCRATCH PAD: NOISE
+% effect of waveform
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'output_noise', 0:0.05:0.2);
+print(gcf, 'noise.png', '-dpng', '-r150');
+close all;
+
+%% SCRATCH PAD: P
+% effect of waveform
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'spike_probability', 0.005:0.005:0.03);
+print(gcf, 'spike_probability.png', '-dpng', '-r150');
+close all;
+
+%% SCENARIO 1: fibers / duration
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'number_of_outputs', 50:50:500, 'duration', 50:50:250);
+print(gcf, 'fibers-duration.png', '-dpng', '-r300');
+close all;
+
+%% SCENARIO 2: fibers / noise
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'number_of_outputs', 50:50:300, 'output_noise', 0:0.05:0.2);
+print(gcf, 'fibers-noise.png', '-dpng', '-r300');
+close all;
+
+%% SCENARIO 4: noise / duration
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'output_noise', 0:0.05:0.2, 'duration', 50:50:250);
+print(gcf, 'noise-duration.png', '-dpng', '-r300');
+close all;
+
+%% SCENARIO 5: noise / amplitude
+explore({'number_of_inputs', 25, 'number_of_outputs', 25}, 'input_noise', 0:0.25:2, 'amplitude', [1 2; 2 3; 4 5; 5 6; 7 8]);
+print(gcf, 'noise-amplitude.png', '-dpng', '-r300');
+close all;
+
+%% SECNARIO 9: realistic round-trip, ICA mode
+explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
 print(gcf, 'ica-g.png', '-dpng', '-r300');
 close all;
