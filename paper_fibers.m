@@ -29,12 +29,11 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/profile.eps'
 
 %% simulate: fibers
 % generate mixing
-fiber_number = 3000;
+fiber_number = 500;
 old_rng = rng(0);
-volume = [1200; 1200; 600];
+volume = [1200; 1200; 1200];
 [fibers, fiber_angles] = generate_fibers(fiber_number, ...
-    'fiber_distribution', [250 0 0; 0 250 0; 0 0 30], ...
-    'position', [0.5; 0.5; 25], 'volume', volume);
+    'position', [0.5; 0.5; 100], 'volume', volume);
 fiber_cells = generate_cells('volume', volume);
 fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
     fiber_profile_exc, fiber_profile_emi, ...
@@ -81,15 +80,15 @@ h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2.1 h.Position(4) * 1.
 
 % plot fiber
 bins = 9;
-hs =subplot(1, 2, 2);
+hs = subplot(1, 2, 2);
 
 [count, edges] = histcounts(fiber_depth, bins);
 
-c = 25;
+c = 100;
 h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([-10 100]); xticks([0 30 60 90]);
+xlabel('Depth [{\mu}]'); xlim([-35 125]); xticks([0 40 80 120]);
 ylabel('Fluorescence yield [% of max]'); yticks([0 50 100]);
-ylim([0 130]);
+ylim([0 100]);
 
 r = ylim();
 line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
@@ -97,7 +96,7 @@ text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
-ylim([0 40]); yticks([0 15 30]);
+ylim([0 600]); yticks([0 250 500]);
 set(gca, 'YColor', [0 0 0]);
 h = ylabel('Number of neurons');
 h.Rotation = -90;
@@ -114,11 +113,11 @@ hs = subplot(1, 2, 1);
 
 [count, edges] = histcounts(chr2_depth, bins);
 
-c = 25;
+c = 100;
 h1 = plot(chr2_depth - c, chr2_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([-10 510]); xticks(0:150:450);
+xlabel('Depth [{\mu}]'); xlim([-50 800]); xticks([0 200 400 600 800]);
 ylabel('Excitation [% of max]'); yticks([0 50 100]);
-ylim([0 130]);
+ylim([0 100]);
 
 r = ylim();
 line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
@@ -126,7 +125,7 @@ text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
-ylim([0 1000]); yticks([0 350 700]);
+ylim([0 12500]); yticks([0 5000 10000]);
 set(gca, 'YColor', [0 0 0]);
 h = ylabel('Number of neurons');
 h.Rotation = -90;
