@@ -178,7 +178,7 @@ end
 rho = corr(s_noisy', s_hat');
 
 % figure out best scores
-[scores, idx] = max(rho, [], 2);
+[scores, idx] = max(abs(rho), [], 2);
 [~, sorted_in] = sort(scores);
 sorted_out = idx(sorted_in);
 if figures
