@@ -27,7 +27,7 @@ else
 end
 
 if ~exist('metric', 'var') || isempty(metric)
-    metric = 0.5;
+    metric = 0.7;
 else
     if detailed
         error('Metric only used if not detailed mode.');
@@ -96,9 +96,26 @@ if nargout < 1 && ~detailed
         elseif 1 < min(size(y))
             y = y(:, 1);
         end
-        imagesc(x, y, mean(output, 3));
+        if ~ischar(metric) && isscalar(metric)
+            number_of_outputs = 50;
+            if strcmp(param_a_name, 'number_of_outputs')
+                number_of_outputs = max(param_a_values);
+            elseif strcmp(param_b_name, 'number_of_outputs')
+                number_of_outputs = max(param_b_values);
+            else
+                for i = 1:2:length(params)
+                    if strcmp(params{i}, 'number_of_outputs')
+                        number_of_outputs = params{i} + 1;
+                    end
+                end
+            end
+            imagesc(x, y, mean(output, 3), [0 number_of_outputs]);
+            title(sprintf('# of separated signals (r^2 \\geq %.1f)', metric));
+        else
+            imagesc(x, y, mean(output, 3));
+            title('Accuracy of source separation');
+        end
         axis xy;
-        title('Accuracy of source separation');
         xlabel(strrep(param_b_name, '_' ,' '));
         ylabel(strrep(param_a_name, '_' ,' '));
         colorbar;
@@ -106,13 +123,21 @@ if nargout < 1 && ~detailed
         bar(mean(output, 3));
         set(gca, 'XTickLabel', param_a_values);
         xlabel(strrep(param_a_name, '_' ,' '));
-        ylabel('Accuracy of source separation');
+        if ~ischar(metric) && isscalar(metric)
+            ylabel(sprintf('# of separated signals (r^2 \\geq %.1f)', metric));
+        else
+            ylabel('Accuracy of source separation');
+        end
         
         figure;
         boxplot(squeeze(output)');
         set(gca, 'XTickLabel', param_a_values);
         xlabel(strrep(param_a_name, '_' ,' '));
-        ylabel('Accuracy of source separation');
+        if ~ischar(metric) && isscalar(metric)
+            ylabel(sprintf('# of separated signals (r^2 \\geq %.1f)', metric));
+        else
+            ylabel('Accuracy of source separation');
+        end
     end
 end
 
