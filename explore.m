@@ -109,7 +109,8 @@ if nargout < 1 && ~detailed
                     end
                 end
             end
-            imagesc(x, y, mean(output, 3), [0 number_of_outputs]);
+            im = mean(output, 3);
+            imagesc(x, y, im, [0 min(number_of_outputs, max(im(:)))]);
             title(sprintf('# of separated signals (r^2 \\geq %.1f)', metric));
         else
             imagesc(x, y, mean(output, 3));
