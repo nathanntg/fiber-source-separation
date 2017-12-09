@@ -34,6 +34,10 @@ profile_fluor = []; % used for profile-rt
 params_fibers = {};
 params_cells = {};
 
+% multiplex
+mp_number = 2;
+mp_all = false;
+
 % ICA
 g = 'skew';
 
@@ -56,6 +60,31 @@ duration_smp = round(sps * duration);
 
 %% GENERATE MIXING MATRIX
 switch mode
+    case 'multiplex-profile-rt'
+        % default profile (geometric)
+        if isempty(profile_exc)
+            profile_exc = sp_geometric();
+        end
+        if isempty(profile_fluor)
+            profile_fluor = profile_exc; % use same one
+        end
+        
+        % prepare profile and other parameters
+        [fibers, fiber_angles] = generate_fibers(number_of_outputs, params_fibers{:});
+        cells = generate_cells(params_cells{:});
+        
+        m = [];
+        for i = 1:mp_number
+            m = [m; generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'fibers_exc', i:mp_number:number_of_outputs, 'figures', false, 'stats', false)];
+        end
+        if mp_all && mp_number > 1
+            m = [m; generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false)];
+        end
+        
+        % remove unused cells
+        m = m(:, any(m > eps, 1));
+        number_of_inputs = size(m, 2);
+        
     case 'profile-rt'
         % default profile (geometric)
         if isempty(profile_exc)
@@ -220,6 +249,36 @@ if figures
     title(sprintf('Source (s_{%d}) + Noise', sorted_in(1)));
     xlabel('Time'); ylabel('Trace');
     subplot(3, 3, 9);
+    plot(t, s_hat(sorted_out(1), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
+    xlabel('Time'); ylabel('Trace');
+    
+    % plot best two
+    figure;
+    nm = min(duration_smp, 300);
+    t = (1:nm) ./ sps;
+    subplot(3, 2, 1);
+    plot(t, s(sorted_in(end), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 2);
+    plot(t, s_hat(sorted_out(end), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(end)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 3);
+    plot(t, s(sorted_in(end - 1), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(end - 1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 4);
+    plot(t, s_hat(sorted_out(end - 1), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(end - 1)));
+    xlabel('Time'); ylabel('Trace');
+    % plot worst
+    subplot(3, 2, 5);
+    plot(t, s(sorted_in(1), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 6);
     plot(t, s_hat(sorted_out(1), 1:nm));
     title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
     xlabel('Time'); ylabel('Trace');

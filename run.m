@@ -13,6 +13,9 @@ profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
 profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
+%% ONE OFF
+simulate_source_separation('mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor);
+
 %% SCRATCH PAD: OFFSET
 % effect of ofset
 %explore({'mode', 'profile-rt', 'number_of_outputs', 25, 'duration', 100, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'offset', {0, 0.1, [0.1 0.01], 1, [1 1.1]});
@@ -70,4 +73,14 @@ close all;
 %% SECNARIO 9: realistic round-trip, ICA mode
 explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'g', {'pow3', 'tanh', 'gauss', 'skew'});
 print(gcf, 'ica-g.png', '-dpng', '-r300');
+close all;
+
+%% SECNARIO 10: realistic round-trip, ICA mode
+explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'sps', 5:5:20);
+print(gcf, 'sps.png', '-dpng', '-r300');
+close all;
+
+%% SECNARIO 11: multiplex
+explore({'mode', 'multiplex-profile-rt', 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'sps', 10, 'mp_all', false}, 'mp_number', 1:4, 'number_of_outputs', 50:50:250);
+print(gcf, 'multiplex.png', '-dpng', '-r300');
 close all;
