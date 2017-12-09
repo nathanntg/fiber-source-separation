@@ -75,8 +75,8 @@ explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profi
 print(gcf, 'ica-g.png', '-dpng', '-r300');
 close all;
 
-%% SECNARIO 10: realistic round-trip, ICA mode
-explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'sps', 5:5:20);
+%% SECNARIO 10: samples per second
+explore({'mode', 'profile-rt', 'number_of_outputs', 100, 'duration', 250, 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'sps', 5:5:25);
 print(gcf, 'sps.png', '-dpng', '-r300');
 close all;
 

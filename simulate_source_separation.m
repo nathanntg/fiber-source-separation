@@ -1,9 +1,12 @@
 function [scores] = simulate_source_separation(varargin)
 
+%#ok<*UNRCH>
+
 % simulation settings
 duration = 50; % seconds
+mps = 100; % model time steps per second
 sps = 20; % samples per second
-spike_probability = 0.02; % 1 spike per 50 samples (2.5 seconds)
+spike_frequency = 0.4; % Hz (spikes per seconds)
 number_of_inputs = 25; % n: sources or neurons
 number_of_outputs = 50; % m: number of distringuishable fibers
 % mixing matrix will m x n size
@@ -41,6 +44,9 @@ mp_all = false;
 % ICA
 g = 'skew';
 
+% threshold (optimization, ignore weak cells)
+opt_threshold = 1e-7; % eps
+
 %% LOAD PARAMETERS
 nparams = length(varargin);
 if 0 < mod(nparams, 2)
@@ -53,10 +59,6 @@ for i = 1:2:nparams
     end
     eval([nm ' = varargin{i+1};']);
 end
-
-%% PREP WORK
-waveform = get_waveform(waveform, sps);
-duration_smp = round(sps * duration);
 
 %% GENERATE MIXING MATRIX
 switch mode
@@ -82,7 +84,7 @@ switch mode
         end
         
         % remove unused cells
-        m = m(:, any(m > eps, 1));
+        m = m(:, any(m > opt_threshold, 1));
         number_of_inputs = size(m, 2);
         
     case 'profile-rt'
@@ -100,7 +102,7 @@ switch mode
         m = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false);
 
         % remove unused cells
-        m = m(:, any(m > 0, 1));
+        m = m(:, any(m > opt_threshold, 1));
         number_of_inputs = size(m, 2);
         
     case 'profile'
@@ -115,14 +117,15 @@ switch mode
         m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, 'figures', false, 'stats', false);
 
         % remove unused cells
-        m = m(:, any(m > 0, 1));
+        m = m(:, any(m > opt_threshold, 1));
         number_of_inputs = size(m, 2);
         
     case 'basic'
         m = generate_mixing_matrix(number_of_inputs, number_of_outputs);
 
         % remove unused cells
-        m = m(:, any(m > 0, 1));
+        m = m(:, any(m > opt_threshold, 1));
+        number_of_inputs = size(m, 2);
         
     otherwise
         error('Invalid mode: %s.', mode);
@@ -133,8 +136,9 @@ if ~isempty(smooth_mixing)
 end
 
 %% GENERATE INPUT
-s = generate_inputs(number_of_inputs, spike_probability, duration_smp, waveform, offset, amplitude);
-% TODO: add correlations to inputs
+waveform = get_waveform(waveform, mps); % wave form in model samples
+s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform, offset, amplitude);
+duration_smp = size(s, 2); % duration in readout samples
 s_noisy = add_noise(s, input_noise, input_noise_type);
 
 % show example
@@ -178,18 +182,22 @@ end
 %% PERFORM SOURCE SEPARATION
 % perform ICA
 if figures
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
+    % s_hat, m_hat, w_hat
+    [s_hat, ~, ~] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
 else
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
+    % s_hat, m_hat, w_hat
+    [s_hat, ~, ~] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
 end
 
 % no convergence?
 if isempty(s_hat)
     % perform ICA
     if figures
-        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'numOfIC', number_of_inputs);
+        % s_hat, m_hat, w_hat
+        [s_hat, ~, ~] = fastica(x_noisy, 'numOfIC', number_of_inputs);
     else
-        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
+        % s_hat, m_hat, w_hat
+        [s_hat, ~, ~] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
     end
     
     % give up
@@ -285,7 +293,7 @@ if figures
     
     figure;
     plot(sort(scores, 'descend'));
-    xlim([1 length(scores)]); ylim([0 1]);
+    xlim([1 100]); ylim([0 1]);
     title('Scores');
     ylabel('r');
     xlabel('Number of signals');
