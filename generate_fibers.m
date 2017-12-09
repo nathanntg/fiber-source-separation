@@ -51,7 +51,7 @@ fiber_area_1sd = fibers_1sd * pi * (fiber_diameter / 2) ^ 2; % area of all the f
 area_1sd = pi * fiber_distribution(1, 1) * fiber_distribution(2, 2); % only handles independent bivariate
 circle_packing = 0.9069;
 if fiber_area_1sd > (circle_packing * area_1sd)
-    warning('Based on circle packing and the fiber density, the maximum number of fibers is %d.', round((circle_packing * area_1sd) / (pi * (fiber_diameter / 2) ^ 2)));
+    warning('Based on circle packing and the fiber density, the maximum number of fibers is %d.', round((circle_packing * area_1sd) / (pi * (fiber_diameter / 2) ^ 2) / 0.682));
 end
 
 % fiber position
