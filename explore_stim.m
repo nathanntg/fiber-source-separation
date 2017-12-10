@@ -17,7 +17,7 @@ light_out_per_mm = light_out * 15.83; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 
 threshold = 5; % mW / mm^2
 
 % cell density
-density = 0.000275; % cells per micron cubed
+density = 0.000780; % cells per micron cubed
 
 %% single fiber
 % above stimulation threshold

@@ -34,7 +34,7 @@ old_rng = rng(0);
 volume = [1200; 1200; 1200];
 [fibers, fiber_angles] = generate_fibers(fiber_number, ...
     'position', [0.5; 0.5; 100], 'volume', volume);
-fiber_cells = generate_cells('volume', volume);
+fiber_cells = generate_cells('volume', volume, 'cell_density', 0.00078);
 fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, fiber_cells, ...
     fiber_profile_exc, fiber_profile_emi, ...
     'normalize', true, 'figures', false);
@@ -74,12 +74,12 @@ for j = find(chr2_exc_cells > threshold)
     chr2_vis = [chr2_vis chr2_exc_cells(j)];
 end
 
-
+%%
 h = figure;
 h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2.1 h.Position(4) * 1.1];
 
 % plot fiber
-bins = 9;
+bins = 15;
 hs = subplot(1, 2, 2);
 
 [count, edges] = histcounts(fiber_depth, bins);
@@ -96,7 +96,7 @@ text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
-ylim([0 600]); yticks([0 250 500]);
+ylim([0 1100]); yticks([0 450 900]);
 set(gca, 'YColor', [0 0 0]);
 h = ylabel('Number of neurons');
 h.Rotation = -90;
@@ -105,10 +105,11 @@ h.VerticalAlignment = 'bottom';
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
 
 hs.Position(1) = hs.Position(1) + 0.03;
+hs.Position(4) = hs.Position(4) * .95;
 hs.Position(2) = hs.Position(2) + 0.04;
 
 % plot chr2
-bins = 19;
+bins = 29;
 hs = subplot(1, 2, 1);
 
 [count, edges] = histcounts(chr2_depth, bins);
@@ -125,7 +126,7 @@ text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
-ylim([0 12500]); yticks([0 5000 10000]);
+ylim([0 22500]); yticks([0 10000 20000]);
 set(gca, 'YColor', [0 0 0]);
 h = ylabel('Number of neurons');
 h.Rotation = -90;
@@ -134,6 +135,7 @@ h.VerticalAlignment = 'bottom';
 legend([h1; h2], 'Neurons', 'Depth distribution', 'Location', 'NorthEast');
 
 hs.Position(1) = hs.Position(1) - 0.05;
+hs.Position(4) = hs.Position(4) * .95;
 hs.Position(2) = hs.Position(2) + 0.04;
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/depth-fiber.eps'); close;
