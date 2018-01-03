@@ -1,4 +1,4 @@
-function [scores] = simulate_source_separation(varargin)
+function [scores, isi, auc] = simulate_source_separation(varargin)
 
 %#ok<*UNRCH>
 
@@ -46,6 +46,9 @@ g = 'skew';
 
 % threshold (optimization, ignore weak cells)
 opt_threshold = 1e-7; % eps
+
+% auc threshold
+auc_threshold = 0.7;
 
 %% LOAD PARAMETERS
 nparams = length(varargin);
@@ -183,10 +186,10 @@ end
 % perform ICA
 if figures
     % s_hat, m_hat, w_hat
-    [s_hat, ~, ~] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
+    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
 else
     % s_hat, m_hat, w_hat
-    [s_hat, ~, ~] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
+    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
 end
 
 % no convergence?
@@ -194,10 +197,10 @@ if isempty(s_hat)
     % perform ICA
     if figures
         % s_hat, m_hat, w_hat
-        [s_hat, ~, ~] = fastica(x_noisy, 'numOfIC', number_of_inputs);
+        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'numOfIC', number_of_inputs);
     else
         % s_hat, m_hat, w_hat
-        [s_hat, ~, ~] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
+        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
     end
     
     % give up
@@ -216,9 +219,12 @@ rho = corr(s_noisy', s_hat');
 
 % figure out best scores
 [scores, idx] = max(abs(rho), [], 2);
-[~, sorted_in] = sort(scores);
-sorted_out = idx(sorted_in);
+
 if figures
+    % sort
+    [~, sorted_in] = sort(scores);
+    sorted_out = idx(sorted_in);
+    
     % plot best two
     figure;
     nm = min(duration_smp, 300);
@@ -355,6 +361,68 @@ if figures
         end
         hold off;
     end
+    
+%     figure;
+%     fpr = [];
+%     tpr = [];
+%     for r = 0:(length(sorted_out) - 1)
+%         num = length(unique(sorted_out((end - r):end)));
+%         fpr = [fpr (number_of_outputs - num) / number_of_outputs];
+%         tpr = [tpr num / number_of_outputs];
+%         if num == size(s_hat, 1)
+%             break;
+%         end
+%     end
+end
+
+if nargout > 1
+    % get best matches
+    idx_in = [];
+    for i = 1:size(s_hat, 1)
+        [~, j] = max(rho(:, i));
+        idx_in = [idx_in j];
+    end
+    
+    % isi
+    % global matrix (should be close to identity with a bunch of zeroish
+    % rows, i guess)
+    g = w_hat * m; % (:, idx_in);
+    g_abs = abs(g);
+    K = size(g, 1);
+    isi = 0;
+    for i = 1:size(g, 1)
+        isi = isi + sum(g_abs(i, :)) / max(g_abs(i, :)) - 1;
+    end
+    for j = 1:size(g, 2)
+        isi = isi + sum(g_abs(:, j)) / max(g_abs(:, j)) - 1;
+    end
+    isi = isi / (2 * K * (K - 1));
+    
+    % auc
+    if isscalar(auc_threshold)
+        auc = calculate_auc(s, s_hat, scores, idx, auc_threshold);
+    else
+        auc = zeros(size(auc_threshold));
+        for i = 1:length(auc_threshold)
+            auc(i) = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
+        end
+    end
+end
+
+if nargout == 0 && ~isscalar(auc_threshold)
+    figure;
+    axis square;
+    l = cell(length(auc_threshold), 1);
+    hold on;
+    for i = 1:length(auc_threshold)
+        [auc, tpr, fpr] = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
+        l{i} = sprintf('r^2 > %.2f (AUC: %.3f)', auc_threshold(i), auc);
+        plot(fpr, tpr);
+    end
+    hold off;
+    legend(l, 'Location', 'SouthEast');
+    xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
+    ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
 end
 
 end

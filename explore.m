@@ -32,8 +32,8 @@ else
     if detailed
         error('Metric only used if not detailed mode.');
     end
-    if ischar(metric) && ~strcmp(metric', 'mean')
-        error('The only supported metrics are a threshold (scalar value) or "mean".');
+    if ischar(metric) && ~strcmp(metric, 'mean') && ~strcmp(metric, 'isi') && ~strcmp(metric, 'auc')
+        error('The only supported metrics are a threshold (scalar value) or "mean", "isi" or "auc".');
     end
 end
 
@@ -59,11 +59,15 @@ for idx_a = 1:length(param_a_values)
         
         % run number of iterations
         for i = 1:iterations
-            scores = simulate_source_separation(p{:});
+            [scores, isi, auc] = simulate_source_separation(p{:});
             if detailed
                 output{idx_a, idx_b, i} = scores;
-            elseif ischar(scores) % mean
+            elseif ischar(metric) && strcmp(metric, 'mean') % mean
                 values(i) = mean(scores);
+            elseif ischar(metric) && strcmp(metric, 'isi') % isi
+                values(i) = isi;
+            elseif ischar(metric) && strcmp(metric, 'auc') % auc
+                values(i) = auc;
             else
                 values(i) = sum(scores > metric);
             end

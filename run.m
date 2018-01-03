@@ -13,6 +13,9 @@ profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
 profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
+%% AUC
+simulate_source_separation('mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 100, 'number_of_outputs', 100, 'auc_threshold', 0.4:0.05:0.75);
+
 %% ONE OFF
 simulate_source_separation('mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor);
 
