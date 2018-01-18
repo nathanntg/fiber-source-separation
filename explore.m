@@ -27,7 +27,7 @@ else
 end
 
 if ~exist('metric', 'var') || isempty(metric)
-    metric = 0.7;
+    metric = 0.6;
 else
     if detailed
         error('Metric only used if not detailed mode.');
