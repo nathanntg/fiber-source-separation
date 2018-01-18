@@ -34,7 +34,24 @@ center = volume .* position;
 
 % open window
 figure;
-plot(fibers(1, :) - center(1), fibers(2, :) - center(2), 'g.', 'MarkerSize', 18);
+
+% plot cells
+threshold = 0.01;
+fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, cells, ...
+    fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
+cell_bright = max(fiber_mix, [], 1);
+[cell_bright_sort, idx] = sort(cell_bright ./ max(cell_bright));
+idx = idx(cell_bright_sort >= threshold);
+cell_bright_sort = cell_bright_sort(cell_bright_sort > threshold);
+scatter(cells(1, idx) - center(1), cells(2, idx) - center(2), 128, cell_bright_sort, 'filled');
+colormap('jet');
+h = colorbar('Ticks', [0.02 0.5 1], 'TickLabels', {'0%', '50%', '100%'});
+ylabel(h, 'Fluorescence yield [% of max]');
+
+% plot fibers
+hold on;
+plot(fibers(1, :) - center(1), fibers(2, :) - center(2), '.', 'MarkerEdgeColor', [1, 0.0784, 0.576], 'MarkerSize', 12);
+hold off;
 axis square;
 l = max(max(abs(fibers(1, :) - center(1))), max(abs(fibers(2, :) - center(2))));
 l = 400; % ceil(l / 100) * 100;
@@ -47,23 +64,26 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig1-distrib
 
 close all;
 
+% constants
+number_of_fibers = 100;
+volume = [1000; 1000; 400];
+position = [0.5; 0.5; 0.25];
+distribution = [25 0 0; 0 25 0; 0 0 5];
+
 old_rng = rng; rng(0);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', 100, 'output_noise', @(n) normrnd(0, 0.05, 1, n), ...
-    'params_fibers', {'fiber_distribution', [25 0 0; 0 25 0; 0 0 5]});
+    'duration', 200, 'number_of_outputs', number_of_fibers, 'output_noise', @(n) normrnd(0, 0.05, 1, n), ... %
+    'params_fibers', {'fiber_distribution', distribution, 'volume', volume, 'position', position}, ...
+    'params_cells', {'volume', volume}, 'figures', 2);
 rng(old_rng);
 
-h = figure(4);
-h.Position = [933 105 1200 1140];
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig2-recovered.eps'); close;
-
-h = figure(2);
-h.Position = [1000 200 900 1140];
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig3-fiber.eps'); close;
-
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig2-signals.eps'); close;
 close all;
 
 %% figure 3: auc
+
+close all;
+
 old_rng = rng; rng(0);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8);
 rng(old_rng);

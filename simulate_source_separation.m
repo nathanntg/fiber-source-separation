@@ -226,34 +226,38 @@ if figures == 2
     [~, sorted_in] = sort(scores);
     sorted_out = idx(sorted_in);
 
-    figure;
+    h = figure;
     nm = min(duration_smp, 300);
     t = (1:nm) ./ sps;
-    subplot(3, 2, 1);
-    plot(t, s(sorted_in(end), 1:nm));
+    
+    subplot(3, 1, 1);
+    [~, o] = max(m(:, sorted_in(end))); % closest match
+    plot(t, 1 + mat2gray(s(sorted_in(end), 1:nm)), ... % original signal
+        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
+        t, 0 + mat2gray(s_hat(sorted_out(end), 1:nm))); % separated signal
+    ylim([0 2]); yticks([]);
+    xlabel('Time [s]'); ylabel('Trace');
     title(sprintf('Source (s_{%d})', sorted_in(end)));
-    xlabel('Time'); ylabel('Trace');
-    subplot(3, 2, 2);
-    plot(t, s_hat(sorted_out(end), 1:nm));
-    title(sprintf('Separated Source (s_{%d})', sorted_out(end)));
-    xlabel('Time'); ylabel('Trace');
-    subplot(3, 2, 3);
-    plot(t, s(sorted_in(end - 1), 1:nm));
-    title(sprintf('Source (s_{%d})', sorted_in(end - 1)));
-    xlabel('Time'); ylabel('Trace');
-    subplot(3, 2, 4);
-    plot(t, s_hat(sorted_out(end - 1), 1:nm));
-    title(sprintf('Separated Source (s_{%d})', sorted_out(end - 1)));
-    xlabel('Time'); ylabel('Trace');
-    % plot worst
-    subplot(3, 2, 5);
-    plot(t, s(sorted_in(1), 1:nm));
-    title(sprintf('Source (s_{%d})', sorted_in(1)));
-    xlabel('Time'); ylabel('Trace');
-    subplot(3, 2, 6);
-    plot(t, s_hat(sorted_out(1), 1:nm));
-    title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
-    xlabel('Time'); ylabel('Trace');
+    
+    subplot(3, 1, 2);
+    [~, o] = max(m(:, sorted_in(end - 1))); % closest match
+    plot(t, 1 + mat2gray(s(sorted_in(end - 1), 1:nm)), ... % original signal
+        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
+        t, 0 + mat2gray(s_hat(sorted_out(end - 1), 1:nm))); % separated signal
+    ylim([0 2]); yticks([]);
+    xlabel('Time [s]'); ylabel('Trace');
+    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    
+    subplot(3, 1, 3);
+    [~, o] = max(m(:, sorted_in(end - 2))); % closest match
+    plot(t, 1 + mat2gray(s(sorted_in(end - 2), 1:nm)), ... % original signal
+        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
+        t, 0 + mat2gray(s_hat(sorted_out(end - 2), 1:nm))); % separated signal
+    ylim([0 2]); yticks([]);
+    xlabel('Time [s]'); ylabel('Trace');
+    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    
+    h.Position(4) = h.Position(4) * 3;
     
     return;
 end
