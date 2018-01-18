@@ -220,6 +220,44 @@ rho = corr(s_noisy', s_hat');
 % figure out best scores
 [scores, idx] = max(abs(rho), [], 2);
 
+% special mode for paper_model.m
+if figures == 2
+    % sort
+    [~, sorted_in] = sort(scores);
+    sorted_out = idx(sorted_in);
+
+    figure;
+    nm = min(duration_smp, 300);
+    t = (1:nm) ./ sps;
+    subplot(3, 2, 1);
+    plot(t, s(sorted_in(end), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 2);
+    plot(t, s_hat(sorted_out(end), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(end)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 3);
+    plot(t, s(sorted_in(end - 1), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(end - 1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 4);
+    plot(t, s_hat(sorted_out(end - 1), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(end - 1)));
+    xlabel('Time'); ylabel('Trace');
+    % plot worst
+    subplot(3, 2, 5);
+    plot(t, s(sorted_in(1), 1:nm));
+    title(sprintf('Source (s_{%d})', sorted_in(1)));
+    xlabel('Time'); ylabel('Trace');
+    subplot(3, 2, 6);
+    plot(t, s_hat(sorted_out(1), 1:nm));
+    title(sprintf('Separated Source (s_{%d})', sorted_out(1)));
+    xlabel('Time'); ylabel('Trace');
+    
+    return;
+end
+
 if figures
     % sort
     [~, sorted_in] = sort(scores);
@@ -415,8 +453,9 @@ if nargout == 0 && ~isscalar(auc_threshold)
     l = cell(length(auc_threshold), 1);
     hold on;
     for i = 1:length(auc_threshold)
+        rec = sum(scores > auc_threshold(i));
         [auc, tpr, fpr] = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
-        l{i} = sprintf('r^2 > %.2f (AUC: %.3f)', auc_threshold(i), auc);
+        l{i} = sprintf('r^2 > %.1f; AUC: %.3f; N: %d', auc_threshold(i), auc, rec);
         plot(fpr, tpr);
     end
     hold off;

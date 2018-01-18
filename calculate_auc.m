@@ -5,6 +5,15 @@ function [auc, tpr, fpr, th] = calculate_auc(s, s_hat, scores, idx, r_threshold)
 row_orig = find(scores > r_threshold);
 row_hat = idx(scores > r_threshold);
 
+% no matches?
+if isempty(row_hat)
+    auc = nan;
+    tpr = [];
+    fpr = [];
+    th = nan;
+    return;
+end
+
 orig = zeros(0, 'logical');
 hat = [];
 

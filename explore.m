@@ -109,7 +109,7 @@ if nargout < 1 && ~detailed
             else
                 for i = 1:2:length(params)
                     if strcmp(params{i}, 'number_of_outputs')
-                        number_of_outputs = params{i} + 1;
+                        number_of_outputs = params{i + 1};
                     end
                 end
             end

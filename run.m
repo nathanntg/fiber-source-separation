@@ -14,7 +14,9 @@ profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
 %% AUC
-simulate_source_separation('mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 100, 'number_of_outputs', 100, 'auc_threshold', 0.4:0.05:0.75);
+simulate_source_separation('mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 100, 'number_of_outputs', 50, 'auc_threshold', 0.2:0.1:0.8);
+print(gcf, 'auc.png', '-dpng', '-r150');
+close all;
 
 %% ONE OFF
 simulate_source_separation('mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor);
@@ -36,21 +38,21 @@ print(gcf, 'output_noise_type.png', '-dpng', '-r150');
 close all;
 
 %% SCRATCH PAD: DURATION
-% effect of waveform
+% effect of simulation duration
 explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'duration', 50:50:300);
 print(gcf, 'duration.png', '-dpng', '-r150');
 close all;
 
 %% SCRATCH PAD: NOISE
-% effect of waveform
+% effect of noise
 explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'output_noise', 0:0.05:0.2);
 print(gcf, 'noise.png', '-dpng', '-r150');
 close all;
 
-%% SCRATCH PAD: P
-% effect of waveform
-explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'spike_probability', 0.005:0.005:0.03);
-print(gcf, 'spike_probability.png', '-dpng', '-r150');
+%% SCRATCH PAD: SPIKE FREQUENCY
+% effect of spike frequency
+explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'spike_frequency', 0.02:0.4:2.2);
+print(gcf, 'spike_frequency.png', '-dpng', '-r150');
 close all;
 
 %% SCENARIO 1: fibers / duration
