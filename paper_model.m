@@ -16,15 +16,17 @@ fiber_profile_emi = sp_3d_to_2d(fiber_profile_emi); % symmetric, way faster
 %% figure 1: fiber distribution
 
 % constants
-number_of_fibers = 250;
-volume = [2400; 2400; 400];
+number_of_fibers = 100;
+volume = [1000; 1000; 400];
 position = [0.5; 0.5; 0.25];
-distribution = [300 0 0; 0 300 0; 0 0 25];
+distribution = [125 0 0; 0 125 0; 0 0 5];
 
 % generate fibers
-old_rng = rng; rng(2);
-[fibers, fiber_angles] = generate_fibers(250, 'volume', volume, 'position', ...
-    position, 'fiber_distribution', distribution);
+old_rng = rng; rng(1);
+[fibers, fiber_angles] = generate_fibers(number_of_fibers, ...
+    'fiber_distribution', distribution, 'volume', volume, ...
+    'position', position);
+cells = generate_cells('volume', volume);
 rng(old_rng);
 
 % calculate center
@@ -35,7 +37,7 @@ figure;
 plot(fibers(1, :) - center(1), fibers(2, :) - center(2), 'g.', 'MarkerSize', 18);
 axis square;
 l = max(max(abs(fibers(1, :) - center(1))), max(abs(fibers(2, :) - center(2))));
-l = 1200; % ceil(l / 100) * 100;
+l = 400; % ceil(l / 100) * 100;
 xlim([-l l]); xticks([-l 0 l]); xlabel('x [{\mu}]');
 ylim([-l l]); yticks([-l 0 l]); ylabel('y [{\mu}]');
 
