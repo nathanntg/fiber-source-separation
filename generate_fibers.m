@@ -18,7 +18,7 @@ position = [0.5; 0.5; 0.25];
 fiber_distribution = [125 0 0; 0 125 0; 0 0 15]; % microns
 
 % angle of fibers, in degrees
-angle_distribution = [5 0; 0 5];
+angle_distribution = 0; % [5 0; 0 5];
 
 % fiber width
 fiber_diameter = 8;
