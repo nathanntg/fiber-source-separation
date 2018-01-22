@@ -61,7 +61,7 @@ for idx_a = 1:length(param_a_values)
         for i = 1:iterations
             [scores, isi, auc] = simulate_source_separation(p{:});
             if detailed
-                output{idx_a, idx_b, i} = scores;
+                output{idx_a, idx_b, i} = struct('scores', scores, 'isi', isi, 'auc', auc);
             elseif ischar(metric) && strcmp(metric, 'mean') % mean
                 values(i) = mean(scores);
             elseif ischar(metric) && strcmp(metric, 'isi') % isi

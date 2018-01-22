@@ -101,3 +101,8 @@ h = figure(7);
 h.Position = [1000 200 880 812];
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig4-auc.eps'); close;
 close all;
+
+%% figure 4: cell density vs fiber density
+explore({'mode', 'profile-rt', 'duration', 200, 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, 'params_fibers', {'angle_distribution', 0, 'fiber_distribution', [100 0 0; 0 100 0; 0 0 0], 'distribution', 'uniform'}}, ...
+    'number_of_outputs', 50:50:500, ...
+    'param_b_name', param_b_values, 5, true);
