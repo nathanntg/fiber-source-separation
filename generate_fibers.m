@@ -23,6 +23,9 @@ angle_distribution = [5 0; 0 5];
 % fiber width
 fiber_diameter = 8;
 
+% fiber distribution
+distribution = 'mv';
+
 %% LOAD PARAMETERS
 nparams=length(varargin);
 if 0 < mod(nparams, 2)
@@ -67,10 +70,24 @@ else
     position(a) = position(a) .* volume(a);
 end
 
-% fibers are dsitributed with a multivariate normal distribution
-% assume targeted to centers (mvnrnd takes VARIANCE)
-fibers = mvnrnd(position, fiber_distribution .^ 2, num_fibers)';
-fiber_angles = deg2rad(mvnrnd([0, 0], angle_distribution .^ 2, num_fibers))';
+if strcmp(distribution, 'uniform')
+    % uniform distribution is useful for some situations where we want to
+    % directly measure the effect of varying distribution parameters
+    fibers = [...
+        unifrnd(position(1) - fiber_distribution(1, 1) / 2, position(1) + fiber_distribution(1, 1) / 2, 1, num_fibers), ...
+        unifrnd(position(2) - fiber_distribution(2, 2) / 2, position(2) + fiber_distribution(2, 2) / 2, 1, num_fibers), ...
+        unifrnd(position(3) - fiber_distribution(3, 3) / 2, position(3) + fiber_distribution(3, 3) / 2, 1, num_fibers) ...
+        ];
+    fiber_angles = deg2rad([...
+        unifrnd(0 - angle_distribution(1, 1) / 2, 0 + angle_distribution(1, 1) / 2, 1, num_fibers), ...
+        unifrnd(0 - angle_distribution(2, 2) / 2, 0 + angle_distribution(2, 2) / 2, 1, num_fibers) ...
+        ]);
+else
+    % fibers are dsitributed with a multivariate normal distribution
+    % assume targeted to centers (mvnrnd takes VARIANCE)
+    fibers = mvnrnd(position, fiber_distribution .^ 2, num_fibers)';
+    fiber_angles = deg2rad(mvnrnd([0, 0], angle_distribution .^ 2, num_fibers))';
+end
 
 % check bounds
 if any(min(fibers, [], 2) < 0) || any(max(fibers, [], 2) > volume)
