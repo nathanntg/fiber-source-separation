@@ -78,7 +78,7 @@ position = [0.5; 0.5; 0.25];
 distribution = [150 0 0; 0 150 0; 0 0 5];
 
 iters = 5;
-thresholds = [0.005 0.01 0.05 0.1 0.2];
+thresholds = [0.01 0.02 0.05 0.1];
 
 result_single = zeros(length(number_of_fibers), length(thresholds), iters);
 result_multi = zeros(length(number_of_fibers), length(thresholds), iters);
@@ -111,35 +111,35 @@ end
 
 rng(old_rng);
 
-% plot it
-h = figure;
-h.Position(3) = h.Position(3) * 2;
+%%
 
-subplot(1, 2, 1);
+% plot it
+figure;
+
 mn = mean(result_single, 3);
 % st = std(result_single, 0, 3);
-plot(number_of_fibers, mn);
+set(gca, 'ColorOrderIndex', 1);
+h = plot(number_of_fibers, mn);
 % hold on;
 % plot(number_of_fibers, mn + st, 'LineWidth', 1);
 % plot(number_of_fibers, mn - st, 'LineWidth', 1);
 % hold off;
 xlabel('Number of fibers');
-ylabel('Neurons above threshold'); ylim([0 ceil(mn(end, 3) / 100) * 100]);
+ylabel('Neurons above threshold');
 title('Visible to one or more fibers');
+
+hold on;
+mn = mean(result_multi, 3);
+% st = std(result_single, 0, 3);
+set(gca, 'ColorOrderIndex', 1);
+plot(number_of_fibers, mn, ':');
+hold off;
 
 l = cell(1, length(thresholds));
 for i = 1:length(thresholds)
     l{i} = sprintf('\\geq %.1f%%', thresholds(i)*100);
 end
-legend('Location', 'NorthWest', l{:});
-
-subplot(1, 2, 2);
-mn = mean(result_multi, 3);
-plot(number_of_fibers, mn);
-xlabel('Number of fibers');
-ylabel('Neurons above threshold'); ylim([0 ceil(mn(end, 3) / 100) * 100]);
-title('Visible to two or more fibers');
-
+legend(h, l{:}, 'Location', 'NorthWest');
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig-cells.eps'); close;
 
 %% figure ?: number of fibers per cell
@@ -150,7 +150,7 @@ volume = [1200; 1200; 400];
 position = [0.5; 0.5; 0.25];
 distribution = [150 0 0; 0 150 0; 0 0 5];
 
-top_neurons = 20; % top brightest neurons
+top_neurons = 50; % top brightest neurons
 top_fibers = 10; % top most visible fibers
 iters = 5; % number of iterations
 norm = true; % normalize by brigtest fiber
