@@ -43,8 +43,8 @@ for i_start = 1:block_size:number
         error('Invalid value for amplitude.');
     end
 
-    % convolve with waveform
-    x = conv2(1, waveform, x, 'same');
+    % convolve with waveform (use waveform as a digital filter)
+    x = filter(waveform, 1, x, [], 2);
 
     % trim (remove start padding)
     x = x(:, (1 + pad_start):end);

@@ -105,99 +105,118 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig1-distrib
 
 % constants
 number_of_fibers = [50 100 150 200 500 750 1000 1500 2000];
+cell_density = [0.000275 0.00078];
 volume = [1200; 1200; 400];
 position = [0.5; 0.5; 0.25];
 distribution = [150 0 0; 0 150 0; 0 0 5];
 
-iters = 5;
-thresholds = [0.01 0.02 0.05 0.1];
-
-result_single = zeros(length(number_of_fibers), length(thresholds), iters);
-result_multi = zeros(length(number_of_fibers), length(thresholds), iters);
-result_per_fiber = zeros(length(number_of_fibers), length(thresholds), iters);
-
-% generate fibers
-old_rng = rng; rng(0);
-cells = generate_cells('volume', volume);
-
-for i = 1:length(number_of_fibers)
-    for j = 1:iters
-        % generate fibers
-        [fibers, fiber_angles] = generate_fibers(number_of_fibers(i), ...
-            'fiber_distribution', distribution, 'volume', volume, ...
-            'position', position);
-        
-        fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, cells, ...
-            fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
-        cell_bright = max(fiber_mix, [], 1);
-        
-        for k = 1:length(thresholds)
-            % swap threshold and iter index
-            result_single(i, k, j) = sum(cell_bright >= thresholds(k));
-            result_multi(i, k, j) = sum(sum(fiber_mix >= thresholds(k), 1) >= 2);
-            result_per_fiber(i, k, j) = mean(sum(fiber_mix >= thresholds(k), 2));
-        end
-    end
-end
-
-rng(old_rng);
-
-%%
-
 % plot it
 h = figure;
 h.Position(3) = 2 * h.Position(3);
+h.Position(4) = length(cell_density) * h.Position(4);
 
-subplot(1, 2, 1);
+old_rng = rng; rng(0);
 
-mn = mean(result_single, 3);
-% st = std(result_single, 0, 3);
-set(gca, 'ColorOrderIndex', 1);
-h = loglog(number_of_fibers, mn);
-% hold on;
-% plot(number_of_fibers, mn + st, 'LineWidth', 1);
-% plot(number_of_fibers, mn - st, 'LineWidth', 1);
-% hold off;
-title('Neurons');
-xlabel('Number of fibers');
-ylabel('Neurons above threshold');
+pos = {};
 
-hold on;
-mn = mean(result_multi, 3);
-% st = std(result_single, 0, 3);
-set(gca, 'ColorOrderIndex', 1);
-loglog(number_of_fibers, mn, ':');
-hold off;
+for cd = 1:length(cell_density)
+    iters = 5;
+    thresholds = [0.01 0.02 0.05 0.1];
 
-% adjust dimensions
-ylim([10 14000]);
-xlim(number_of_fibers([1 end]));
+    result_single = zeros(length(number_of_fibers), length(thresholds), iters);
+    result_multi = zeros(length(number_of_fibers), length(thresholds), iters);
+    result_per_fiber = zeros(length(number_of_fibers), length(thresholds), iters);
+    result_per_fiber_multi = zeros(length(number_of_fibers), length(thresholds), iters);
 
-hold on;
-mn = mean(result_multi, 3);
-% st = std(result_single, 0, 3);
-set(gca, 'ColorOrderIndex', 1);
-plot(number_of_fibers, mn, ':');
-hold off;
+    % generate fibers
+    cells = generate_cells('volume', volume, 'cell_density', cell_density(cd));
 
-l = cell(1, length(thresholds));
-for i = 1:length(thresholds)
-    l{i} = sprintf('\\geq %.1f%%', thresholds(i)*100);
+    for i = 1:length(number_of_fibers)
+        for j = 1:iters
+            % generate fibers
+            [fibers, fiber_angles] = generate_fibers(number_of_fibers(i), ...
+                'fiber_distribution', distribution, 'volume', volume, ...
+                'position', position);
+
+            fiber_mix = generate_realistic_rt_mixing(fibers, fiber_angles, cells, ...
+                fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
+            cell_bright = max(fiber_mix, [], 1);
+
+            for k = 1:length(thresholds)
+                % swap threshold and iter index
+                cell_vis_to_multi = sum(fiber_mix >= thresholds(k), 1) >= 2;
+                result_single(i, k, j) = sum(cell_bright >= thresholds(k));
+                result_multi(i, k, j) = sum(cell_vis_to_multi);
+                result_per_fiber(i, k, j) = mean(sum(fiber_mix >= thresholds(k), 2));
+                result_per_fiber_multi(i, k, j) = mean(sum(fiber_mix(:, cell_vis_to_multi) >= thresholds(k), 2));
+            end
+        end
+    end
+
+    hs = subplot(length(cell_density), 2, 2 * (cd - 1) + 1);
+    pos{end + 1} = get(hs, 'Position');
+
+    mn = mean(result_single, 3);
+    % st = std(result_single, 0, 3);
+    set(gca, 'ColorOrderIndex', 1);
+    h = loglog(number_of_fibers, mn);
+    % hold on;
+    % plot(number_of_fibers, mn + st, 'LineWidth', 1);
+    % plot(number_of_fibers, mn - st, 'LineWidth', 1);
+    % hold off;
+    title('Neurons');
+    xlabel('Number of fibers');
+    ylabel('Neurons above threshold');
+
+    hold on;
+    mn = mean(result_multi, 3);
+    % st = std(result_single, 0, 3);
+    set(gca, 'ColorOrderIndex', 1);
+    loglog(number_of_fibers, mn, ':');
+    hold off;
+
+    % adjust dimensions
+    ylim([10 99000]);
+    xlim(number_of_fibers([1 end]));
+
+    l = cell(1, length(thresholds));
+    for i = 1:length(thresholds)
+        l{i} = sprintf('\\geq %.1f%%', thresholds(i)*100);
+    end
+    legend(h, l{:}, 'Location', 'NorthWest');
+
+    % neurons per fiber
+    subplot(length(cell_density), 2, 2 * (cd - 1) + 2);
+
+    mn = mean(result_per_fiber, 3);
+    set(gca, 'ColorOrderIndex', 1);
+    loglog(number_of_fibers, mn);
+
+    hold on;
+    mn = mean(result_per_fiber_multi, 3);
+    % st = std(result_single, 0, 3);
+    set(gca, 'ColorOrderIndex', 1);
+    loglog(number_of_fibers, mn, ':');
+    hold off;
+
+    xlim(number_of_fibers([1 end]));
+    
+    ylim([0.2 500]);
+
+    xlabel('Number of fibers');
+    ylabel('Neurons above threshold');
+    title('Neurons per fiber');
 end
-legend(h, l{:}, 'Location', 'NorthWest');
 
-subplot(1, 2, 2);
+% titles
+ax = axes('Position', [0 0 1 1], 'Visible', 'off');
+for cd = 1:length(cell_density)
+    spp = pos{cd};
+    text(ax, spp(1) - 0.07, spp(2) + spp(4) / 2, sprintf('Density: %dk per mm^3', cell_density(cd) * 1000^3 / 1000), 'FontWeight', 'bold', 'FontSize', 24, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+        'Units', 'normalized', 'Rotation', 90);
+end
 
-mn = mean(result_per_fiber, 3);
-set(gca, 'ColorOrderIndex', 1);
-loglog(number_of_fibers, mn);
-
-xlim(number_of_fibers([1 end]));
-ylim([0 130]);
-
-xlabel('Number of fibers');
-ylabel('Neurons above threshold');
-title('Neurons per fiber');
+rng(old_rng);
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig2-cells.eps'); close;
 
@@ -307,8 +326,6 @@ end
 
 rng(old_rng);
 
-%%
-
 h = figure;
 h.Position = h.Position .* [1 1 2 2];
 
@@ -324,7 +341,7 @@ for i = 1:length(number_of_fibers)
     title(sprintf('%d fibers', number_of_fibers(i)));
 end
 
-%r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig4-fibers.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig4-fibers.eps'); close;
 
 %% figure 5: sample signals
 
@@ -338,20 +355,21 @@ distribution = [150 0 0; 0 150 0; 0 0 5]; % good results: [25 0 0; 0 25 0; 0 0 5
 
 old_rng = rng; rng(1);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', number_of_fibers, 'output_noise', 0, ...
+    'duration', 200, 'number_of_outputs', number_of_fibers, ...
     'params_fibers', {'fiber_distribution', distribution, 'angle_distribution', 0, 'volume', volume, 'position', position}, ...
-    'params_cells', {'volume', volume}, 'figures', 2);
+    'params_cells', {'volume', volume}, 'figures', 2, 'g', 'unmix');
 rng(old_rng);
 
-%r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig5-signals.eps'); close;
-%close all;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig5-signals.eps'); close;
+close all;
 
 %% figure 6: auc
 
 close all;
 
 old_rng = rng; rng(0);
-simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, 'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8);
+simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+    'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8, 'output_noise', 0, 'g', 'unmix');
 rng(old_rng);
 
 h = figure(7);
@@ -363,3 +381,36 @@ close all;
 %explore({'mode', 'profile-rt', 'duration', 200, 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, 'params_fibers', {'angle_distribution', 0, 'fiber_distribution', [100 0 0; 0 100 0; 0 0 0], 'distribution', 'uniform'}}, ...
 %    'number_of_outputs', 50:50:500, ...
 %    'param_b_name', param_b_values, 5, true);
+
+
+%% figure ?: multiplexing feasibility
+
+opt_fiber = 1e-3;
+opt_neuron = 1e-4;
+number_of_fibers = 1000;
+volume = [1200; 1200; 400];
+position = [0.5; 0.5; 0.25];
+distribution = [150 0 0; 0 150 0; 0 0 5];
+
+for i = 1:length(number_of_fibers)
+    % generate fibers
+    [fibers, fiber_angles] = generate_fibers(number_of_fibers(i));
+    
+    % generate cells
+    cells = generate_cells();
+    
+    % normal
+    %m_alt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
+    %m_alt = m_alt(:, any(m_alt > opt_neuron, 1));
+    
+    % mixing matrix
+    m = generate_multiplex_mixing(fibers, fiber_angles, cells, fiber_profile_exc, fiber_profile_emi, number_of_fibers(i) / 2, false, 'opt_fiber', opt_fiber, 'opt_neuron', opt_neuron, 'as_single', true);
+end
+
+disp(size(m));
+
+figure;
+semilogy(svd(m * m'));
+title('1000 fibers; 500 step multiplexing');
+
+

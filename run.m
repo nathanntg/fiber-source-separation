@@ -13,13 +13,13 @@ profile_exc = sp_3d_to_2d(profile_exc); % symmetric, way faster
 profile_fluor = sp_model('sensitivity-profile/fiber-fluor.mat');
 profile_fluor = sp_3d_to_2d(profile_fluor); % symmetric, way faster
 
+%% ONE OFF
+simulate_source_separation('mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor);
+
 %% AUC
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 100, 'number_of_outputs', 50, 'auc_threshold', 0.2:0.1:0.8);
 print(gcf, 'auc.png', '-dpng', '-r150');
 close all;
-
-%% ONE OFF
-simulate_source_separation('mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor);
 
 %% SCRATCH PAD: OFFSET
 % effect of ofset
@@ -54,6 +54,14 @@ close all;
 explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250}, 'spike_frequency', 0.02:0.4:2.2);
 print(gcf, 'spike_frequency.png', '-dpng', '-r150');
 close all;
+
+%% SCRATCH PAD: MULTIPLEX
+explore({'mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250, 'number_of_outputs', 1000}, 'mp_number', [1 5 10 50 100 500]);
+print(gcf, 'multiplex.png', '-dpng', '-r150');
+
+explore({'mode', 'multiplex-profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor, 'duration', 250, 'number_of_outputs', 1000}, 'mp_number', [1 5 10 50 100 500], 'g', 'unmix');
+print(gcf, 'multiplex-unmix.png', '-dpng', '-r150');
+%close all;
 
 %% SCENARIO 1: fibers / duration
 explore({'mode', 'profile-rt', 'profile_exc', profile_exc, 'profile_fluor', profile_fluor}, 'number_of_outputs', 50:50:500, 'duration', 50:50:250);

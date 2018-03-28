@@ -78,12 +78,12 @@ switch mode
         [fibers, fiber_angles] = generate_fibers(number_of_outputs, params_fibers{:});
         cells = generate_cells(params_cells{:});
         
-        m = [];
-        for i = 1:mp_number
-            m = [m; generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'fibers_exc', i:mp_number:number_of_outputs, 'figures', false, 'stats', false)];
-        end
-        if mp_all && mp_number > 1
-            m = [m; generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, 'figures', false, 'stats', false)];
+        % generate mixing matrix
+        if mp_number > 100
+            warning('Using heavily optimized mixing matrix.');
+            m = generate_multiplex_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, mp_number, mp_all, 'opt_fiber', 1e-3, 'opt_neuron', 1e-4);
+        else
+            m = generate_multiplex_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, mp_number, mp_all, 'opt_fiber', 1e-3, 'opt_neuron', 1e-4);
         end
         
         % remove unused cells
@@ -139,8 +139,8 @@ if ~isempty(smooth_mixing)
 end
 
 %% GENERATE INPUT
-waveform = get_waveform(waveform, mps); % wave form in model samples
-s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform, offset, amplitude);
+waveform_v = get_waveform(waveform, mps); % wave form in model samples
+s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform_v, offset, amplitude);
 duration_smp = size(s, 2); % duration in readout samples
 s_noisy = add_noise(s, input_noise, input_noise_type);
 
@@ -183,33 +183,39 @@ if figures
 end
 
 %% PERFORM SOURCE SEPARATION
-% perform ICA
-if figures
-    % s_hat, m_hat, w_hat
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
+if strcmp(g, 'unmix')
+    [m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
+elseif strcmp(g, 'nnmf')
+    [m_hat, s_hat] = unmix_nnmf(x_noisy, get_waveform(waveform, sps));
 else
-    % s_hat, m_hat, w_hat
-    [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
-end
-
-% no convergence?
-if isempty(s_hat)
     % perform ICA
     if figures
         % s_hat, m_hat, w_hat
-        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'numOfIC', number_of_inputs);
+        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', g, 'numOfIC', number_of_inputs);
     else
         % s_hat, m_hat, w_hat
-        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
+        [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'g', g, 'numOfIC', number_of_inputs);
     end
-    
-    % give up
+
+    % no convergence?
     if isempty(s_hat)
-        fprintf('WARNING: No convergence using g=pow3. Giving up.\n');
-        scores = 0;
-        return;
-    else
-        fprintf('WARNING: No convergence using g=skew. Used g=pow3 instead.\n');
+        % perform ICA
+        if figures
+            % s_hat, m_hat, w_hat
+            [s_hat, m_hat, w_hat] = fastica(x_noisy, 'numOfIC', number_of_inputs);
+        else
+            % s_hat, m_hat, w_hat
+            [s_hat, m_hat, w_hat] = fastica(x_noisy, 'verbose', 'off', 'displayMode', 'off', 'numOfIC', number_of_inputs);
+        end
+
+        % give up
+        if isempty(s_hat)
+            fprintf('WARNING: No convergence using g=pow3. Giving up.\n');
+            scores = 0;
+            return;
+        else
+            fprintf('WARNING: No convergence using g=skew. Used g=pow3 instead.\n');
+        end
     end
 end
 
@@ -225,37 +231,56 @@ if figures == 2
     % sort
     [~, sorted_in] = sort(scores);
     sorted_out = idx(sorted_in);
+    
+    % brightest cells in mixing matrix
+    [~, brightest_per_fiber] = sort(m_hat, 2, 'descend');
+    best_scores = max(rho, [], 1);
+    
+    % find where the brightest two cells both have scores about 0.7
+    potential_fibers = find(all(best_scores(brightest_per_fiber(:, 1:2)) > 0.7, 2));
+    
+    % brightest
+    brightest_intensity_per_fiber = sort(m_hat(potential_fibers, :), 2, 'descend');
+    [~, ratio_between_brightest] = min(brightest_intensity_per_fiber(:, 1) ./ brightest_intensity_per_fiber(:, 2));
+    
+    % fiber to plot
+    fiber_to_plot = potential_fibers(ratio_between_brightest);
+    
+    % strongest neurons
+    [~, separated_in_fiber] = sort(m_hat(fiber_to_plot, :), 'descend');
+    [~, neurons_in_fiber] = max(rho(:, separated_in_fiber));
+    
+    clrs = lines(3);
 
     h = figure;
     nm = min(duration_smp, 300);
     t = (1:nm) ./ sps;
     
     subplot(3, 1, 1);
-    [~, o] = max(m(:, sorted_in(end))); % closest match
-    plot(t, 1 + mat2gray(s(sorted_in(end), 1:nm)), ... % original signal
-        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
-        t, 0 + mat2gray(s_hat(sorted_out(end), 1:nm))); % separated signal
-    ylim([0 2]); yticks([]);
-    xlabel('Time [s]'); ylabel('Trace');
-    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    plot(t, mat2gray(x_noisy(fiber_to_plot, 1:nm)), 'Color', clrs(2, :)); % fiber signal
+    ylim([0 1]); yticks([]);
+    xlabel('Time [s]'); ylabel('Intensity');
+    title(sprintf('Fiber (y_{%d})', fiber_to_plot));
+    legend('Fiber', 'Location', 'NorthWest');
     
     subplot(3, 1, 2);
-    [~, o] = max(m(:, sorted_in(end - 1))); % closest match
-    plot(t, 1 + mat2gray(s(sorted_in(end - 1), 1:nm)), ... % original signal
-        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
-        t, 0 + mat2gray(s_hat(sorted_out(end - 1), 1:nm))); % separated signal
-    ylim([0 2]); yticks([]);
+    hold on;
+    plot(t, 0.5 + mat2gray(s(neurons_in_fiber(1), 1:nm)), 'Color', clrs(1, :)); % original signal
+    plot(t, 0 + mat2gray(s_hat(separated_in_fiber(1), 1:nm)), 'Color', clrs(3, :)); % separated signal
+    hold off;
+    ylim([0 1.5]); yticks([]);
     xlabel('Time [s]'); ylabel('Trace');
-    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    title(sprintf('Neuron (x_{%d})', neurons_in_fiber(1)));
+    legend('Neuron', 'Separated', 'Location', 'NorthWest');
     
     subplot(3, 1, 3);
-    [~, o] = max(m(:, sorted_in(end - 2))); % closest match
-    plot(t, 1 + mat2gray(s(sorted_in(end - 2), 1:nm)), ... % original signal
-        t, 0.5 + mat2gray(x_noisy(o, 1:nm)), ... % fiber signal
-        t, 0 + mat2gray(s_hat(sorted_out(end - 2), 1:nm))); % separated signal
-    ylim([0 2]); yticks([]);
+    hold on;
+    plot(t, 0.5 + mat2gray(s(neurons_in_fiber(2), 1:nm)), 'Color', clrs(1, :)); % original signal
+    plot(t, 0 + mat2gray(s_hat(separated_in_fiber(2), 1:nm)), 'Color', clrs(3, :)); % separated signal
+    hold off;
+    ylim([0 1.5]); yticks([]);
     xlabel('Time [s]'); ylabel('Trace');
-    title(sprintf('Source (s_{%d})', sorted_in(end)));
+    title(sprintf('Neuron (x_{%d})', neurons_in_fiber(2)));
     
     h.Position(4) = h.Position(4) * 3;
     
