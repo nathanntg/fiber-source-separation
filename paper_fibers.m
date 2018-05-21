@@ -16,16 +16,20 @@ fiber_profile_emi = sp_3d_to_2d(fiber_profile_emi); % symmetric, way faster
 %% generate profile
 im = [fiber_profile_exc.volume(end:-1:2, :); fiber_profile_exc.volume];
 y = [-1 * fiber_profile_exc.r(end:-1:2) fiber_profile_exc.r];
-figure;
-imagesc(fiber_profile_exc.z, y, log10(im), [-4 0]);
+figure('Renderer', 'painters');
+%imagesc(fiber_profile_exc.z, y, log10(im), [-4 0]);
+h = pcolor(fiber_profile_exc.z, y, log10(im));
+h.LineStyle = 'none';
+caxis([-4 0]);
+shading interp;
 %title('Excitation profile');
-axis xy; xlabel('z [{\mu}]'); ylabel('x [{\mu}]');
+axis xy; xlabel('z [µm]'); ylabel('x [µm]');
 xlim([-75 675]); ylim([-375 375]); axis square;
 xticks([0 300 600]); yticks([-300 0 300]);
 colorbar('Ticks', [-4 -2 0], 'TickLabels', {'10^{-4}', '10^{-2}', '10^0'});
 colormap('jet');
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/profile.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/profile.eps'); close;
 
 %% simulate: fibers
 % generate mixing
@@ -75,7 +79,7 @@ for j = find(chr2_exc_cells > threshold)
 end
 
 %%
-h = figure;
+h = figure('Renderer', 'painters');
 h.Position = [h.Position(1) h.Position(2) h.Position(3) * 2.1 h.Position(4) * 1.1];
 
 % plot fiber
@@ -85,8 +89,8 @@ hs = subplot(1, 2, 2);
 [count, edges] = histcounts(fiber_depth, bins);
 
 c = 100;
-h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([-35 125]); xticks([0 40 80 120]);
+h1 = plot(fiber_depth - c, fiber_vis * 100, '.', 'MarkerSize', 20);
+xlabel('Depth [µm]'); xlim([-35 125]); xticks([0 40 80 120]);
 ylabel('Fluorescence yield [% of max]'); yticks([0 50 100]);
 ylim([0 100]);
 
@@ -115,8 +119,8 @@ hs = subplot(1, 2, 1);
 [count, edges] = histcounts(chr2_depth, bins);
 
 c = 100;
-h1 = plot(chr2_depth - c, chr2_vis * 100, '.', 'MarkerSize', 25);
-xlabel('Depth [{\mu}]'); xlim([-50 800]); xticks([0 200 400 600 800]);
+h1 = plot(chr2_depth - c, chr2_vis * 100, '.', 'MarkerSize', 20);
+xlabel('Depth [µm]'); xlim([-50 800]); xticks([0 200 400 600 800]);
 ylabel('Excitation [% of max]'); yticks([0 50 100]);
 ylim([0 100]);
 
@@ -138,4 +142,4 @@ hs.Position(1) = hs.Position(1) - 0.05;
 hs.Position(4) = hs.Position(4) * .95;
 hs.Position(2) = hs.Position(2) + 0.04;
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/depth-fiber.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/depth-fiber.eps'); close;
