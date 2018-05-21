@@ -252,7 +252,7 @@ if figures == 2
     
     clrs = lines(3);
 
-    h = figure;
+    h = figure('Renderer', 'painters');
     nm = min(duration_smp, 300);
     t = (1:nm) ./ sps;
     

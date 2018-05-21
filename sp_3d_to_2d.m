@@ -18,7 +18,7 @@ if ~isscalar(idx_zero)
 end
 
 % create new profile
-new_volume = squeeze(profile.volume(idx_zero, idx_positive, :));
+new_volume = squeeze(profile.volume(idx_positive, idx_zero, :));
 
 % create new profile
 profile = struct('r', profile.x(idx_positive), ...

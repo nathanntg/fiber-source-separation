@@ -13,17 +13,71 @@ fiber_profile_exc = sp_3d_to_2d(fiber_profile_exc); % symmetric, way faster
 fiber_profile_emi = sp_model('sensitivity-profile/fiber-fluor.mat');
 fiber_profile_emi = sp_3d_to_2d(fiber_profile_emi); % symmetric, way faster
 
-%% figure 1: fiber distribution
+%% figure 2: sensitivity profile
+h = figure('Renderer', 'painters');
+h.Position = h.Position .* [1 1 3 1.1];
+
+% draw image
+subplot(1, 3, 1);
+photo = imread('/Users/nathan/Documents/School/BU/Gardner Lab/Fiber/Modeling Paper/profile/fitc.jpg');
+photo = permute(photo, [2 1 3]);
+image(photo);
+axis xy; xlabel('z [µm]'); ylabel('x [µm]');
+xticks([]); yticks([]); axis square;
+
+% 70px/6um
+xlim(880 + [-500 500]); ylim(1370 + [-500 500]);
+
+% scale bar
+line([420 653], [980 980], 'Color', 'white');
+text(536.5, 960, '20 µm', 'FontSize', 22, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Color', 'white');
+
+% profile in water
+detail_profile_exc_water = sp_model('sensitivity-profile/detail-exc-water.mat');
+detail_profile_exc_water = sp_3d_to_2d(detail_profile_exc_water);
+
+subplot(1, 3, 2);
+im = [detail_profile_exc_water.volume(end:-1:2, :); detail_profile_exc_water.volume];
+y = [-1 * detail_profile_exc_water.r(end:-1:2) detail_profile_exc_water.r];
+imagesc(detail_profile_exc_water.z, y, im, [0 1]);
+%title('Excitation profile');
+axis xy; xlabel('z [µm]'); ylabel('x [µm]');
+xlim([-20 65]); ylim([-42.5 42.5]); axis square;
+xticks([]); yticks([]);
+colormap('jet'); caxis([0 1]);
+
+% profile in water
+detail_profile_exc = sp_model('sensitivity-profile/detail-exc.mat');
+detail_profile_exc = sp_3d_to_2d(detail_profile_exc);
+
+ax3 = subplot(1, 3, 3);
+im = [detail_profile_exc.volume(end:-1:2, :); detail_profile_exc.volume];
+y = [-1 * detail_profile_exc.r(end:-1:2) detail_profile_exc.r];
+imagesc(detail_profile_exc.z, y, im, [0 1]);
+%title('Excitation profile');
+axis xy; xlabel('z [µm]'); ylabel('x [µm]');
+xlim([-20 65]); ylim([-42.5 42.5]); axis square;
+xticks([]); yticks([]);
+colormap('jet'); caxis([0 1]);
+
+% colorbar position
+spp = get(ax3, 'Position');
+colorbar('Ticks', [0 0.5 1], ...
+    'Position', [spp(1) + spp(3) + 0.02, spp(2), 0.01, spp(4)]);
+
+%r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig2-profile.eps'); close;
+
+%% figure 3: fiber distribution
 
 % constants
 number_of_fibers = [250 500];
-cell_density = [0.000275 0.00078];
+cell_density = [0.00025 0.0005];
 volume = [1000; 1000; 400];
 position = [0.5; 0.5; 0.25];
 distribution = [150 0 0; 0 150 0; 0 0 5];
 
 % open window
-h = figure;
+h = figure('Renderer', 'painters');
 h.Position = h.Position .* [1 1 2 2];
 
 % seed random number generator
@@ -69,8 +123,8 @@ for i = 1:length(number_of_fibers)
         axis square;
         l = max(max(abs(fibers(1, :) - center(1))), max(abs(fibers(2, :) - center(2))));
         l = 520; % ceil(l / 100) * 100;
-        xlim([-l l]); xticks([-500 0 500]); xlabel('x [{\mu}]');
-        ylim([-l l]); yticks([-500 0 500]); ylabel('y [{\mu}]');
+        xlim([-l l]); xticks([-500 0 500]); xlabel('x [µm]');
+        ylim([-l l]); yticks([-500 0 500]); ylabel('y [µm]');
         
         % number of cells
         h = text(.98 * l, .98 * -l, sprintf('Neurons: %d', length(cell_bright_sort)), 'FontSize', 22, 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom');
@@ -99,19 +153,21 @@ text(ax, spp3(1) - 0.07, spp3(2) + spp3(4) / 2, sprintf('Density: %dk per mm^3',
 
 rng(old_rng);
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig1-distribution.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig3-distribution.eps'); close;
 
-%% figure 2: number of cells seen
+%% figure 4: number of cells seen
 
 % constants
+iters = 5;
+thresholds = [0.01 0.02 0.05 0.1];
 number_of_fibers = [50 100 150 200 500 750 1000 1500 2000];
-cell_density = [0.000275 0.00078];
+cell_density = [0.00025 0.0005];
 volume = [1200; 1200; 400];
 position = [0.5; 0.5; 0.25];
 distribution = [150 0 0; 0 150 0; 0 0 5];
 
 % plot it
-h = figure;
+h = figure('Renderer', 'painters');
 h.Position(3) = 2 * h.Position(3);
 h.Position(4) = length(cell_density) * h.Position(4);
 
@@ -120,9 +176,6 @@ old_rng = rng; rng(0);
 pos = {};
 
 for cd = 1:length(cell_density)
-    iters = 5;
-    thresholds = [0.01 0.02 0.05 0.1];
-
     result_single = zeros(length(number_of_fibers), length(thresholds), iters);
     result_multi = zeros(length(number_of_fibers), length(thresholds), iters);
     result_per_fiber = zeros(length(number_of_fibers), length(thresholds), iters);
@@ -201,7 +254,7 @@ for cd = 1:length(cell_density)
 
     xlim(number_of_fibers([1 end]));
     
-    ylim([0.2 500]);
+    ylim([0.2 500]); yticks([1 10 100]);
 
     xlabel('Number of fibers');
     ylabel('Neurons above threshold');
@@ -218,9 +271,9 @@ end
 
 rng(old_rng);
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig2-cells.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig4-cells.eps'); close;
 
-%% figure 3: neuron strengths per fiber
+%% figure 5: neuron strengths per fiber
 
 % constants
 number_of_fibers = [50 250 500 750];
@@ -236,7 +289,7 @@ result = cell(1, length(number_of_fibers));
 
 % generate fibers
 old_rng = rng; rng(0);
-cells = generate_cells('volume', volume);
+cells = generate_cells('volume', volume, 'cell_density', 0.00025);
 
 for i = 1:length(number_of_fibers)
     result{i} = zeros(number_of_fibers(i), top_neurons, iters);
@@ -264,7 +317,7 @@ end
 
 rng(old_rng);
 
-h = figure;
+h = figure('Renderer', 'painters');
 h.Position = h.Position .* [1 1 2 2];
 
 for i = 1:length(number_of_fibers)
@@ -279,9 +332,9 @@ for i = 1:length(number_of_fibers)
     title(sprintf('%d fibers', number_of_fibers(i)));
 end
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig3-neurons.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig5-neurons.eps'); close;
 
-%% figure 4: number of fibers per cell
+%% figure 6: number of fibers per cell
 
 % constants
 number_of_fibers = [50 250 500 750];
@@ -298,7 +351,7 @@ result = zeros(length(number_of_fibers), top_fibers, top_neurons, iters);
 
 % generate fibers
 old_rng = rng; rng(0);
-cells = generate_cells('volume', volume);
+cells = generate_cells('volume', volume, 'cell_density', 0.00025);
 
 for i = 1:length(number_of_fibers)
     for j = 1:iters
@@ -326,7 +379,7 @@ end
 
 rng(old_rng);
 
-h = figure;
+h = figure('Renderer', 'painters');
 h.Position = h.Position .* [1 1 2 2];
 
 for i = 1:length(number_of_fibers)
@@ -341,9 +394,9 @@ for i = 1:length(number_of_fibers)
     title(sprintf('%d fibers', number_of_fibers(i)));
 end
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig4-fibers.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig6-fibers.eps'); close;
 
-%% figure 5: sample signals
+%% figure 7: sample signals
 
 close all;
 
@@ -355,26 +408,27 @@ distribution = [150 0 0; 0 150 0; 0 0 5]; % good results: [25 0 0; 0 25 0; 0 0 5
 
 old_rng = rng; rng(1);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', number_of_fibers, ...
+    'duration', 200, 'number_of_outputs', number_of_fibers, 'output_noise', 0, ...
     'params_fibers', {'fiber_distribution', distribution, 'angle_distribution', 0, 'volume', volume, 'position', position}, ...
-    'params_cells', {'volume', volume}, 'figures', 2, 'g', 'unmix');
+    'params_cells', {'volume', volume, 'cell_density', 0.00025}, 'figures', 2, 'g', 'unmix');
 rng(old_rng);
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig5-signals.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig7-signals.eps'); close;
 close all;
 
-%% figure 6: auc
+%% figure 8: auc
 
 close all;
 
 old_rng = rng; rng(0);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8, 'output_noise', 0, 'g', 'unmix');
+    'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8, 'output_noise', 0, 'g', 'unmix', ...
+    'params_cells', {'cell_density', 0.00025});
 rng(old_rng);
 
 h = figure(7);
 h.Position = [1000 200 880 812];
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Desktop/fig6-auc.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-auc.eps'); close;
 close all;
 
 %% figure ?: cell density vs fiber density
@@ -397,7 +451,7 @@ for i = 1:length(number_of_fibers)
     [fibers, fiber_angles] = generate_fibers(number_of_fibers(i));
     
     % generate cells
-    cells = generate_cells();
+    cells = generate_cells('cell_density', 0.00025);
     
     % normal
     %m_alt = generate_realistic_rt_mixing(fibers, fiber_angles, cells, fiber_profile_exc, fiber_profile_emi, 'figures', false, 'stats', false);
