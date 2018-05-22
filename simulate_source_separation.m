@@ -2,6 +2,9 @@ function [scores, isi, auc] = simulate_source_separation(varargin)
 
 %#ok<*UNRCH>
 
+% mode
+sss_mode = ''; % special modes for generating figures: not a great approach
+
 % simulation settings
 duration = 50; % seconds
 mps = 100; % model time steps per second
@@ -185,8 +188,14 @@ end
 %% PERFORM SOURCE SEPARATION
 if strcmp(g, 'unmix')
     [m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
+    w_hat = inv(m_hat);
 elseif strcmp(g, 'nnmf')
     [m_hat, s_hat] = unmix_nnmf(x_noisy, get_waveform(waveform, sps));
+    w_hat = inv(m_hat);
+elseif strcmp(g, 'none')
+    s_hat = x_noisy;
+    m_hat = eye(number_of_outputs);
+    w_hat = eye(number_of_outputs);
 else
     % perform ICA
     if figures
@@ -227,7 +236,7 @@ rho = corr(s_noisy', s_hat');
 [scores, idx] = max(abs(rho), [], 2);
 
 % special mode for paper_model.m
-if figures == 2
+if strcmp(sss_mode, 'traces')
     % sort
     [~, sorted_in] = sort(scores);
     sorted_out = idx(sorted_in);
@@ -465,8 +474,22 @@ if nargout > 1
     end
     isi = isi / (2 * K * (K - 1));
     
+    % auc control
+    if strcmp(sss_mode, 'auc_control')
+        s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform_v, offset, amplitude);
+        sss_mode = 'auc';
+    end
+    
     % auc
-    if isscalar(auc_threshold)
+    if strcmp(sss_mode, 'auc')
+        % struct structure
+        auc = struct('threshold', nan, 'number', nan, 'auc', nan, 'tpr', nan, 'fpr', nan);
+        for i = 1:length(auc_threshold)
+            rec = sum(scores > auc_threshold(i));
+            [a, tpr, fpr] = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
+            auc(i) = struct('threshold', auc_threshold(i), 'number', rec, 'auc', a, 'tpr', tpr, 'fpr', fpr);
+        end
+    elseif isscalar(auc_threshold)
         auc = calculate_auc(s, s_hat, scores, idx, auc_threshold);
     else
         auc = zeros(size(auc_threshold));
@@ -474,23 +497,6 @@ if nargout > 1
             auc(i) = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
         end
     end
-end
-
-if nargout == 0 && ~isscalar(auc_threshold)
-    figure;
-    axis square;
-    l = cell(length(auc_threshold), 1);
-    hold on;
-    for i = 1:length(auc_threshold)
-        rec = sum(scores > auc_threshold(i));
-        [auc, tpr, fpr] = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
-        l{i} = sprintf('r^2 > %.1f; AUC: %.3f; N: %d', auc_threshold(i), auc, rec);
-        plot(fpr, tpr);
-    end
-    hold off;
-    legend(l, 'Location', 'SouthEast');
-    xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
-    ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
 end
 
 end

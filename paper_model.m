@@ -410,26 +410,231 @@ old_rng = rng; rng(1);
 simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
     'duration', 200, 'number_of_outputs', number_of_fibers, 'output_noise', 0, ...
     'params_fibers', {'fiber_distribution', distribution, 'angle_distribution', 0, 'volume', volume, 'position', position}, ...
-    'params_cells', {'volume', volume, 'cell_density', 0.00025}, 'figures', 2, 'g', 'unmix');
+    'params_cells', {'volume', volume, 'cell_density', 0.00025}, 'sss_mode', 'traces', 'g', 'unmix');
 rng(old_rng);
 
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig7-signals.eps'); close;
 close all;
 
 %% figure 8: auc
+% idea: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
 
-close all;
+iters = 5; % number of iterations
+thresholds = [0.2 0.25 0.3 0.5 0.7 0.9];
+colors = lines(length(thresholds));
+base_fpr = linspace(0, 1, 101);
+tprs = zeros(length(thresholds), length(base_fpr), iters);
+nums = zeros(length(thresholds), iters);
+aucs = zeros(length(thresholds), iters);
+
+% create figure
+h = figure;
+h.Position = [1 1 880 812];
+
+hold on;
 
 old_rng = rng; rng(0);
-simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', 100, 'auc_threshold', 0.2:0.1:0.8, 'output_noise', 0, 'g', 'unmix', ...
-    'params_cells', {'cell_density', 0.00025});
+for i = 1:iters
+    [~, ~, auc] = simulate_source_separation('mode', 'profile-rt', ...
+        'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+        'duration', 200, 'number_of_outputs', 100, 'auc_threshold', thresholds, ...
+        'output_noise', 0, 'g', 'unmix', 'params_cells', {'cell_density', 0.00025}, ...
+        'sss_mode', 'auc', 'figures', false);
+    
+    for j = 1:length(thresholds)
+        fpr = auc(j).fpr;
+        tpr = auc(j).tpr;
+        
+        % draw individual trials
+        %plot(fpr, tpr, 'LineWidth', 1, 'Color', colors(j, :));
+        
+        % other values
+        nums(j, i) = auc(j).number;
+        aucs(j, i) = auc(j).auc;
+        
+        % unique
+        [fpr, idx] = unique(fpr, 'last');
+        tpr = tpr(idx);
+        tprs(j, :, i) = interp1(fpr, tpr, base_fpr, 'linear', 'extrap');
+        tprs(j, 1, i) = 0;
+    end
+end
 rng(old_rng);
 
-h = figure(7);
-h.Position = [1000 200 880 812];
+% draw mean lines
+l = cell(1, length(thresholds));
+h = zeros(1, length(thresholds));
+for j = 1:length(thresholds)
+    % mean
+    mn = mean(tprs(j, :, :), 3);
+    st = std(tprs(j, :, :), 0, 3);
+    
+    % draw patch
+    %patch_x = [base_fpr fliplr(base_fpr)];
+    %patch_y = [max(mn - st, 0) fliplr(min(mn + st, 1))];
+    %patch(patch_x, patch_y, 1, 'FaceColor', colors(j, :), 'EdgeColor', 'none', 'FaceAlpha', 0.2);
+
+    % draw line
+    h(j) = plot(base_fpr, mn, 'Color', colors(j, :));
+    auc = trapz(base_fpr, mn);
+    
+    % make legend entry
+    l{j} = sprintf('r^2 > %.2f; AUC: %.3f; N: %.1f', thresholds(j), mean(aucs(j, :)), mean(nums(j, :)));
+end
+
+hold off;
+
+legend(h, l, 'Location', 'SouthEast');
+xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
+ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
+
 r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-auc.eps'); close;
-close all;
+
+%% figure ?: auc control 1: compare with random traces
+
+iters = 5; % number of iterations
+thresholds = [0.2 0.25 0.3 0.5 0.7 0.9];
+colors = lines(length(thresholds));
+base_fpr = linspace(0, 1, 101);
+tprs = zeros(length(thresholds), length(base_fpr), iters);
+nums = zeros(length(thresholds), iters);
+aucs = zeros(length(thresholds), iters);
+
+% create figure
+h = figure;
+h.Position = [1 1 880 812];
+
+hold on;
+
+old_rng = rng; rng(0);
+for i = 1:iters
+    [~, ~, auc] = simulate_source_separation('mode', 'profile-rt', ...
+        'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+        'duration', 200, 'number_of_outputs', 100, 'auc_threshold', thresholds, ...
+        'output_noise', 0, 'g', 'unmix', 'params_cells', {'cell_density', 0.00025}, ...
+        'sss_mode', 'auc_control', 'figures', false);
+    
+    for j = 1:length(thresholds)
+        fpr = auc(j).fpr;
+        tpr = auc(j).tpr;
+        
+        % draw individual trials
+        %plot(fpr, tpr, 'LineWidth', 1, 'Color', colors(j, :));
+        
+        % other values
+        nums(j, i) = auc(j).number;
+        aucs(j, i) = auc(j).auc;
+        
+        % unique
+        [fpr, idx] = unique(fpr, 'last');
+        tpr = tpr(idx);
+        tprs(j, :, i) = interp1(fpr, tpr, base_fpr, 'linear', 'extrap');
+        tprs(j, 1, i) = 0;
+    end
+end
+rng(old_rng);
+
+% draw mean lines
+l = cell(1, length(thresholds));
+h = zeros(1, length(thresholds));
+for j = 1:length(thresholds)
+    % mean
+    mn = mean(tprs(j, :, :), 3);
+    st = std(tprs(j, :, :), 0, 3);
+    
+    % draw patch
+    %patch_x = [base_fpr fliplr(base_fpr)];
+    %patch_y = [max(mn - st, 0) fliplr(min(mn + st, 1))];
+    %patch(patch_x, patch_y, 1, 'FaceColor', colors(j, :), 'EdgeColor', 'none', 'FaceAlpha', 0.2);
+
+    % draw line
+    h(j) = plot(base_fpr, mn, 'Color', colors(j, :));
+    auc = trapz(base_fpr, mn);
+    
+    % make legend entry
+    l{j} = sprintf('r^2 > %.2f; AUC: %.3f; N: %.1f', thresholds(j), mean(aucs(j, :)), mean(nums(j, :)));
+end
+
+hold off;
+
+legend(h, l, 'Location', 'SouthEast');
+xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
+ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
+
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig-auc-control1.eps'); close;
+
+%% figure ?: auc control 2; no unmixing
+
+iters = 5; % number of iterations
+thresholds = [0.2 0.25 0.3 0.5 0.7 0.9];
+colors = lines(length(thresholds));
+base_fpr = linspace(0, 1, 101);
+tprs = zeros(length(thresholds), length(base_fpr), iters);
+nums = zeros(length(thresholds), iters);
+aucs = zeros(length(thresholds), iters);
+
+% create figure
+h = figure;
+h.Position = [1 1 880 812];
+
+hold on;
+
+old_rng = rng; rng(0);
+for i = 1:iters
+    [~, ~, auc] = simulate_source_separation('mode', 'profile-rt', ...
+        'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+        'duration', 200, 'number_of_outputs', 100, 'auc_threshold', thresholds, ...
+        'output_noise', 0, 'g', 'none', 'params_cells', {'cell_density', 0.00025}, ...
+        'sss_mode', 'auc', 'figures', false);
+    
+    for j = 1:length(thresholds)
+        fpr = auc(j).fpr;
+        tpr = auc(j).tpr;
+        
+        % draw individual trials
+        %plot(fpr, tpr, 'LineWidth', 1, 'Color', colors(j, :));
+        
+        % other values
+        nums(j, i) = auc(j).number;
+        aucs(j, i) = auc(j).auc;
+        
+        % unique
+        [fpr, idx] = unique(fpr, 'last');
+        tpr = tpr(idx);
+        tprs(j, :, i) = interp1(fpr, tpr, base_fpr, 'linear', 'extrap');
+        tprs(j, 1, i) = 0;
+    end
+end
+rng(old_rng);
+
+% draw mean lines
+l = cell(1, length(thresholds));
+h = zeros(1, length(thresholds));
+for j = 1:length(thresholds)
+    % mean
+    mn = mean(tprs(j, :, :), 3);
+    st = std(tprs(j, :, :), 0, 3);
+    
+    % draw patch
+    %patch_x = [base_fpr fliplr(base_fpr)];
+    %patch_y = [max(mn - st, 0) fliplr(min(mn + st, 1))];
+    %patch(patch_x, patch_y, 1, 'FaceColor', colors(j, :), 'EdgeColor', 'none', 'FaceAlpha', 0.2);
+
+    % draw line
+    h(j) = plot(base_fpr, mn, 'Color', colors(j, :));
+    auc = trapz(base_fpr, mn);
+    
+    % make legend entry
+    l{j} = sprintf('r^2 > %.2f; AUC: %.3f; N: %.1f', thresholds(j), mean(aucs(j, :)), mean(nums(j, :)));
+end
+
+hold off;
+
+legend(h, l, 'Location', 'SouthEast');
+xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
+ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
+
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig-auc-control2.eps'); close;
 
 %% figure ?: cell density vs fiber density
 %explore({'mode', 'profile-rt', 'duration', 200, 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, 'params_fibers', {'angle_distribution', 0, 'fiber_distribution', [100 0 0; 0 100 0; 0 0 0], 'distribution', 'uniform'}}, ...
