@@ -399,22 +399,7 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig6-fibers.ep
 %% figure 7: sample signals
 
 close all;
-
-% constants
-number_of_fibers = 250; % good results: 100
-volume = [1000; 1000; 400];
-position = [0.5; 0.5; 0.25];
-distribution = [150 0 0; 0 150 0; 0 0 5]; % good results: [25 0 0; 0 25 0; 0 0 5]
-
-old_rng = rng; rng(1);
-simulate_source_separation('mode', 'profile-rt', 'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-    'duration', 200, 'number_of_outputs', number_of_fibers, 'output_noise', 0, ...
-    'params_fibers', {'fiber_distribution', distribution, 'angle_distribution', 0, 'volume', volume, 'position', position}, ...
-    'params_cells', {'volume', volume, 'cell_density', 0.00025}, 'sss_mode', 'traces', 'g', 'unmix');
-rng(old_rng);
-
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig7-signals.eps'); close;
-close all;
+toy_model;
 
 %% figure 8: auc
 % idea: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
