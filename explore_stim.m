@@ -12,8 +12,8 @@ profile_exc = sp_model('sensitivity-profile/fiber-exc.mat');
 voxel_size = median(diff(profile_exc.x)) * median(diff(profile_exc.y)) * median(diff(profile_exc.z));
 
 % stimulation threshold
-light_out = 0.0544  * 52; % uW out of the fiber.
-light_out_per_mm = light_out * 15.83; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 8 µm / 2) ^ 2) in mW/mm^2"
+light_out = 1.021427031; % uW out of the fiber.
+light_out_per_mm = light_out * 49.7359; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 8 µm / 2) ^ 2) in mW/mm^2"
 threshold = 5; % mW / mm^2
 
 % cell density

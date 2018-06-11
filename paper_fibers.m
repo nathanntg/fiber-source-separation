@@ -96,7 +96,7 @@ ylim([0 100]);
 
 r = ylim();
 line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
-text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'top', 'Rotation', 90);
+text(0, r(2) - 2, 'Mean implant depth', 'FontSize', 18, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'Rotation', 90);
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
@@ -126,7 +126,7 @@ ylim([0 100]);
 
 r = ylim();
 line([0 0], r, 'LineWidth', 1, 'Color', [0.7 0.7 0.7]);
-text(0, r(2) - 2, 'Implant', 'FontSize', 20, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'top', 'Rotation', 90);
+text(0, r(2) - 2, 'Mean implant depth', 'FontSize', 18, 'FontWeight', 'bold', 'Color', [0.8 0.8 0.8], 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'Rotation', 90);
 
 yyaxis right;
 h2 = plot(edges(2:end) - c, count);
