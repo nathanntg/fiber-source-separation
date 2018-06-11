@@ -1,5 +1,5 @@
 function [auc, tpr, fpr, th] = calculate_auc(s, s_hat, scores, idx, r_threshold)
-%UNTITLED Summary of this function goes here
+%CALCULATE_AUC Summary of this function goes here
 %   Detailed explanation goes here
 
 row_orig = find(scores > r_threshold);
