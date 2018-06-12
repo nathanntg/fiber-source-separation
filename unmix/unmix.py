@@ -46,6 +46,15 @@ tf_Xw = tf.squeeze(tf.nn.conv2d(tf_X4D, tf_filter, strides=[1, 1, 1, 1], padding
 
 tf_MX = tf.matmul(tf_M, tf_Xw)
 
+tf_sparse_M_row = (np.sqrt(components) - tf.norm(tf_M, ord=1, axis=0) / (1e-5 + tf.norm(tf_M, ord=2, axis=0))) / \
+              (np.sqrt(components) - 1)
+
+tf_sparse_X_row = (np.sqrt(components) - tf.norm(tf_X, ord=1, axis=0) / (1e-5 + tf.norm(tf_X, ord=2, axis=0))) / \
+              (np.sqrt(components) - 1)
+
+tf_sparse_X_col = (np.sqrt(timesteps) - tf.norm(tf_X, ord=1, axis=1) / (1e-5 + tf.norm(tf_X, ord=2, axis=1))) / \
+              (np.sqrt(timesteps) - 1)
+
 # cost
 tf_err = tf_Y - tf_MX[:, waveform_len-1:]
 # tf_err = tf.divide(tf_Y - tf_MX[:, waveform_len-1:], tf_MX[:, waveform_len-1:])

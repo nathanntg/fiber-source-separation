@@ -5,6 +5,8 @@ import math
 
 dt = np.float32
 
+# configuration
+iterations = 5000
 stop_threshold = 1e-5
 stop_without_improvement = 500
 
@@ -18,13 +20,27 @@ components = Y.shape[0]
 timesteps = Y.shape[1]
 waveform_len = len(waveform)
 
+# M0?
+if 'M0' in mat:
+    M0 = mat['M0'].astype(dt)
+    assert(M0.shape == (components, components))
+else:
+    M0 = np.eye(components, components, dtype=dt) + 0.00001
+    print('Seeding random M_0')
+if 'X0' in mat:
+    X0 = mat['X0'].astype(dt)
+    assert(X0.shape == (components, timesteps + waveform_len - 1))
+else:
+    X0 = np.abs(np.random.randn(components, timesteps + waveform_len - 1).astype(dt))
+    print('Seeding random X_0')
+
 # pass Y to tensorflow
 tf_Y = tf.constant(Y)
 tf_waveform = tf.constant(waveform[::-1])
 
 # unmixing components
-tf_M = tf.Variable(np.random.rand(components, components).astype(dt))
-tf_X = tf.Variable(np.random.rand(components, timesteps + waveform_len - 1).astype(dt))
+tf_M = tf.Variable(M0, constraint=lambda v: tf.clip_by_value(v, 0, np.inf))
+tf_X = tf.Variable(X0, constraint=lambda v: tf.clip_by_value(v, 0, np.inf))
 
 # convolve
 tf_X4D = tf.expand_dims(tf.expand_dims(tf_X, 1), -1)
@@ -42,24 +58,19 @@ sps = 20
 freq = 0.4
 p = freq / sps
 prob_M = tf.distributions.Exponential(0.00638246)
-prob_X = tf.distributions.Normal(float(timesteps) * p, math.sqrt(float(timesteps) * p * (1 - p)))
+# prob_X = tf.distributions.Normal(float(timesteps) * p, math.sqrt(float(timesteps) * p * (1 - p)))
+prob_X = tf.distributions.Bernoulli(probs=p)
 prob_err = tf.distributions.Normal(0.0, 0.1)
 
-tf_prob = tf.reduce_sum(prob_M.log_prob(tf_M)) + tf.reduce_sum(prob_X.log_prob(tf_X)) + tf.reduce_sum(prob_err.log_prob(tf_err))
-tf_cost = tf.reduce_sum(tf.pow(tf_Y - tf_MX[:, waveform_len-1:], 2))
+# tf.reduce_mean(prob_M.log_prob(tf_M)) +
+tf_prob = tf.reduce_mean(prob_X.log_prob(tf_X)) + tf.reduce_mean(prob_err.log_prob(tf_err))
+tf_cost = tf.reduce_sum(tf.pow(tf_err, 2))
 
 # configuration
-iterations = 100000
-opt = tf.train.GradientDescentOptimizer(0.001)
-gradients = opt.compute_gradients(0 - tf_prob)
-clipped_gradients = [(tf.clip_by_value(grad, -np.inf, var), var) for grad, var in gradients]
-step_train = opt.apply_gradients(clipped_gradients)
-step_init = tf.global_variables_initializer()
+opt = tf.train.AdamOptimizer()
+step_train = opt.minimize(0 - tf_prob)
 
-# force nonnegativity via clip
-clip_M = tf_M.assign(tf.multiply(tf_M, tf.cast(tf_M >= 0, dtype=dt)))
-clip_X = tf_X.assign(tf.multiply(tf_X, tf.cast(tf_X >= 0, dtype=dt)))
-step_clip = tf.group(clip_M, clip_X)
+step_init = tf.global_variables_initializer()
 
 # minimum
 stop_threshold *= components * components + components * timesteps
@@ -105,4 +116,5 @@ with tf.Session() as sess:
     X = X[:, waveform_len-1:]
 
 # write output
-cpio.savemat('temp.mat', dict([('M', M), ('Xw', Xw), ('X', X), ('cost', cost), ('costs', costs), ('stop_condition', stop_condition)]))
+cpio.savemat('temp.mat', dict([('M', M), ('Xw', Xw), ('X', X), ('cost', cost), ('costs', costs),
+                               ('stop_condition', stop_condition)]))

@@ -1,30 +1,32 @@
-function [M, Xw] = unmix_nnmf(Y, waveform)
+function [M, X] = unmix_nnmf(Y, waveform)
 %UNMIX_NNMF Summary of this function goes here
 %   Detailed explanation goes here
 
-% dimensions
-components = size(Y, 1);
-timesteps = size(Y, 2);
-waveform_len = length(waveform);
+unfilter = ~isempty(waveform);
 
-% smoothing W matrix
-W = zeros(timesteps, timesteps);
-for i2 = 1:timesteps
-    i1 = max(i2 - waveform_len + 1, 1);
-    l = 1 + i2 - i1;
-    W(i1:i2, i2) = waveform(l:-1:1);
+% unfilter
+if unfilter
+    waveform_len = length(waveform);
+    delta = zeros(1, waveform_len * 3);
+    delta(1) = 1;
+    r = deconv(delta, waveform);
+    Y = filter(r, 1, Y, [], 2);
+    Y = max(Y, 0);
 end
 
-% unsmooth
-Y = Y / W;
+% dimensions
+components = size(Y, 1);
 
 % run NNMF
 iterations = 1000;
 opt = statset('MaxIter', iterations);
 [M, X] = nnmf(Y, components, 'options', opt);
 
-% re-smooth
-Xw = X * W;
+
+% smooth again
+if unfilter
+    X = filter(waveform, 1, X, [], 2);
+end
 
 end
 

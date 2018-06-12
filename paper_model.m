@@ -399,7 +399,7 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig6-fibers.ep
 %% figure 7: sample signals
 
 close all;
-toy_model;
+toy_source_separation;
 
 %% figure 8: auc
 % idea: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
@@ -423,7 +423,7 @@ for i = 1:iters
     [~, ~, auc] = simulate_source_separation('mode', 'profile-rt', ...
         'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
         'duration', 200, 'number_of_outputs', 100, 'auc_threshold', thresholds, ...
-        'output_noise', 0, 'g', 'unmix', 'params_cells', {'cell_density', 0.00025}, ...
+        'output_noise', 0, 'g', 'nnica', 'params_cells', {'cell_density', 0.00025}, ...
         'sss_mode', 'auc', 'figures', false);
     
     for j = 1:length(thresholds)
@@ -440,8 +440,12 @@ for i = 1:iters
         % unique
         [fpr, idx] = unique(fpr, 'last');
         tpr = tpr(idx);
-        tprs(j, :, i) = interp1(fpr, tpr, base_fpr, 'linear', 'extrap');
-        tprs(j, 1, i) = 0;
+        if ~isempty(tpr)
+            tprs(j, :, i) = interp1(fpr, tpr, base_fpr, 'linear', 'extrap');
+            tprs(j, 1, i) = 0;
+        else
+            tprs(j, 2:end, i) = 1;
+        end
     end
 end
 rng(old_rng);

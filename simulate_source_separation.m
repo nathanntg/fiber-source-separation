@@ -190,8 +190,10 @@ if strcmp(g, 'unmix')
     [m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
     w_hat = inv(m_hat);
 elseif strcmp(g, 'nnmf')
-    [m_hat, s_hat] = unmix_nnmf(x_noisy, get_waveform(waveform, sps));
+    [m_hat, s_hat] = unmix_nnmf_sparse(x_noisy, get_waveform(waveform, sps));
     w_hat = inv(m_hat);
+elseif strcmp(g, 'nnica')
+    [s_hat, m_hat, w_hat] = unmix_nnica(x_noisy, get_waveform(waveform, sps));
 elseif strcmp(g, 'none')
     s_hat = x_noisy;
     m_hat = eye(number_of_outputs);

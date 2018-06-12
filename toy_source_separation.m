@@ -56,9 +56,10 @@ x_noisy = add_noise(x, output_noise, output_noise_type);
 
 %% unmix
 %[m_hat, s_hat] = unmix_als(x_noisy);
-%[m_hat, s_hat] = unmix_nnmf(x_noisy, get_waveform(waveform, sps));
+%[m_hat, s_hat] = unmix_nnmf_sparse(x_noisy, get_waveform(waveform, sps));
 %[m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
-[s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', 'skew', 'numOfIC', size(fibers, 2));
+%[s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', 'skew', 'numOfIC', size(fibers, 2));
+[s_hat, m_hat, w_hat] = unmix_nnica(x_noisy, get_waveform(waveform, sps));
 
 %% visualize
 h = figure; 
@@ -128,7 +129,7 @@ title('Signals via fibers');
 
 % panel d: separated signals
 rho = corr(s_noisy', s_hat');
-[~, idx] = max(rho, [], 1);
+[~, idx] = max(rho, [], 2);
 
 subplot(2, 2, 4);
 plot_many((1:size(s_hat, 2)) ./ sps, s_hat(idx(1:n), :)');
