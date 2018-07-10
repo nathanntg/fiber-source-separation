@@ -1,4 +1,9 @@
 function [m, exc_cells, exc_fibers_max] = generate_realistic_rt_mixing(fibers, fiber_angles, cells, profile_exc, profile_emi, varargin)
+%GENERATE_REALISTIC_RT_MIXING Uses sensitivity profiles for mixing matrix
+%   All fibers provide excitation, based on the excitation profile, which
+%   is summed together. Each fiber will collect fluorescence from the
+%   neurons in its respective sensitivity profile. Like
+%   GENERATE_REALISTIC_MIXING, but includes the excitation element.
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers

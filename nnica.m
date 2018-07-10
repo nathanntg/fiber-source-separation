@@ -1,6 +1,7 @@
 function [Z, M, W] = nnica(Y)
-%NNICA Summary of this function goes here
-%   Detailed explanation goes here
+%NNICA Non-negative independent component analysis
+%   Based on the rotational technique described in "Algorithms for 
+%   Nonnegative Independent Component Analysis" by Mark D. Plumbley.
 
 % number of dimensions to extract
 num_sig = size(Y, 1);

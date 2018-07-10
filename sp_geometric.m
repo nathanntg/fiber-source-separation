@@ -1,6 +1,6 @@
 function profile = sp_geometric(varargin)
-%SP_GEOMETRIC Summary of this function goes here
-%   Detailed explanation goes here
+%SP_GEOMETRIC Generate geometric sensitivity profile
+%   Uses a cone to approximate the sensitivity profile of a fiber.
 
 % fiber width
 fiber_diameter = 8; % microns

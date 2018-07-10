@@ -1,4 +1,7 @@
 function m = generate_realistic_mixing(fibers, fiber_angles, cells, profile, varargin)
+%GENERATE_REALISTIC_MIXING Uses a sensitivity profile to make mixing matrix
+%   Based on a set of cells and fibers, calculates the sensitivity of each
+%   fiber to a specific cell, constructing a mixing matrix.
 
 % works in 3D space where X and Y are perpindicular to the fibers,
 % and Z is parallel to the fibers

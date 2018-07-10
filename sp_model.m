@@ -1,6 +1,6 @@
 function profile = sp_model(fn, threshold)
-%SP_MODEL Summary of this function goes here
-%   Detailed explanation goes here
+%SP_MODEL Load sensitivity profile
+%   Loads the sensitivity profile from the MAT file referenced by `fn`.
 
 %% DEFAULTS
 if ~exist('threshold', 'var')

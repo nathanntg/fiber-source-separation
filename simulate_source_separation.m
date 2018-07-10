@@ -1,9 +1,11 @@
 function [scores, isi, auc] = simulate_source_separation(varargin)
+%SIMULATE_SOURCE_SEPARATION Run simulation of source separation
+%   Highly customizable simulation of source separation process, given a
+%   set of fibers distributed throughout a neural volume. All simulation
+%   settings below can be specified through the variable arguments,
+%   overriding default simulation parameters.
 
 %#ok<*UNRCH>
-
-% mode
-sss_mode = ''; % special modes for generating figures: not a great approach
 
 % simulation settings
 duration = 50; % seconds
@@ -25,6 +27,7 @@ input_noise_type = 'scale';
 output_noise = @(n) normrnd(0, 0.1, 1, n); % either single value (0) or callback that generates noise
 output_noise_type = 'scale';
 
+% open figures showing results
 figures = true;
 
 % correlations
@@ -36,7 +39,7 @@ profile = []; % used for profile
 profile_exc = []; % used for profile-rt
 profile_fluor = []; % used for profile-rt
 
-% params fibers
+% parameters for generating the fibers and the neurons
 params_fibers = {};
 params_cells = {};
 
@@ -44,7 +47,7 @@ params_cells = {};
 mp_number = 2;
 mp_all = false;
 
-% ICA
+% ICA g parameter, or "nnica", or "none"
 g = 'skew';
 
 % threshold (optimization, ignore weak cells)
@@ -186,13 +189,7 @@ if figures
 end
 
 %% PERFORM SOURCE SEPARATION
-if strcmp(g, 'unmix')
-    [m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
-    w_hat = inv(m_hat);
-elseif strcmp(g, 'nnmf')
-    [m_hat, s_hat] = unmix_nnmf_sparse(x_noisy, get_waveform(waveform, sps));
-    w_hat = inv(m_hat);
-elseif strcmp(g, 'nnica')
+if strcmp(g, 'nnica')
     [s_hat, m_hat, w_hat] = unmix_nnica(x_noisy, get_waveform(waveform, sps));
 elseif strcmp(g, 'none')
     s_hat = x_noisy;
@@ -236,67 +233,6 @@ rho = corr(s_noisy', s_hat');
 
 % figure out best scores
 [scores, idx] = max(abs(rho), [], 2);
-
-% special mode for paper_model.m
-if strcmp(sss_mode, 'traces')
-    % sort
-    [~, sorted_in] = sort(scores);
-    sorted_out = idx(sorted_in);
-    
-    % brightest cells in mixing matrix
-    [~, brightest_per_fiber] = sort(m_hat, 2, 'descend');
-    best_scores = max(rho, [], 1);
-    
-    % find where the brightest two cells both have scores about 0.7
-    potential_fibers = find(all(best_scores(brightest_per_fiber(:, 1:2)) > 0.7, 2));
-    
-    % brightest
-    brightest_intensity_per_fiber = sort(m_hat(potential_fibers, :), 2, 'descend');
-    [~, ratio_between_brightest] = min(brightest_intensity_per_fiber(:, 1) ./ brightest_intensity_per_fiber(:, 2));
-    
-    % fiber to plot
-    fiber_to_plot = potential_fibers(ratio_between_brightest);
-    
-    % strongest neurons
-    [~, separated_in_fiber] = sort(m_hat(fiber_to_plot, :), 'descend');
-    [~, neurons_in_fiber] = max(rho(:, separated_in_fiber));
-    
-    clrs = lines(3);
-
-    h = figure('Renderer', 'painters');
-    nm = min(duration_smp, 300);
-    t = (1:nm) ./ sps;
-    
-    subplot(3, 1, 1);
-    plot(t, mat2gray(x_noisy(fiber_to_plot, 1:nm)), 'Color', clrs(2, :)); % fiber signal
-    ylim([0 1]); yticks([]);
-    xlabel('Time [s]'); ylabel('Intensity');
-    title(sprintf('Fiber (y_{%d})', fiber_to_plot));
-    legend('Fiber', 'Location', 'NorthWest');
-    
-    subplot(3, 1, 2);
-    hold on;
-    plot(t, 0.5 + mat2gray(s(neurons_in_fiber(1), 1:nm)), 'Color', clrs(1, :)); % original signal
-    plot(t, 0 + mat2gray(s_hat(separated_in_fiber(1), 1:nm)), 'Color', clrs(3, :)); % separated signal
-    hold off;
-    ylim([0 1.5]); yticks([]);
-    xlabel('Time [s]'); ylabel('Trace');
-    title(sprintf('Neuron (x_{%d})', neurons_in_fiber(1)));
-    legend('Neuron', 'Separated', 'Location', 'NorthWest');
-    
-    subplot(3, 1, 3);
-    hold on;
-    plot(t, 0.5 + mat2gray(s(neurons_in_fiber(2), 1:nm)), 'Color', clrs(1, :)); % original signal
-    plot(t, 0 + mat2gray(s_hat(separated_in_fiber(2), 1:nm)), 'Color', clrs(3, :)); % separated signal
-    hold off;
-    ylim([0 1.5]); yticks([]);
-    xlabel('Time [s]'); ylabel('Trace');
-    title(sprintf('Neuron (x_{%d})', neurons_in_fiber(2)));
-    
-    h.Position(4) = h.Position(4) * 3;
-    
-    return;
-end
 
 if figures
     % sort
@@ -476,22 +412,8 @@ if nargout > 1
     end
     isi = isi / (2 * K * (K - 1));
     
-    % auc control
-    if strcmp(sss_mode, 'auc_control')
-        s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform_v, offset, amplitude);
-        sss_mode = 'auc';
-    end
-    
     % auc
-    if strcmp(sss_mode, 'auc')
-        % struct structure
-        auc = struct('threshold', nan, 'number', nan, 'auc', nan, 'tpr', nan, 'fpr', nan);
-        for i = 1:length(auc_threshold)
-            rec = sum(scores > auc_threshold(i));
-            [a, tpr, fpr] = calculate_auc(s, s_hat, scores, idx, auc_threshold(i));
-            auc(i) = struct('threshold', auc_threshold(i), 'number', rec, 'auc', a, 'tpr', tpr, 'fpr', fpr);
-        end
-    elseif isscalar(auc_threshold)
+    if isscalar(auc_threshold)
         auc = calculate_auc(s, s_hat, scores, idx, auc_threshold);
     else
         auc = zeros(size(auc_threshold));

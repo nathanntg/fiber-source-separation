@@ -1,4 +1,8 @@
 function output = explore(params, param_a_name, param_a_values, param_b_name, param_b_values, iterations, detailed, metric)
+%EXPLORE Run a series of source separation simulations
+%   Runs multiple source separation simulations, varying 1 or 2 parameters.
+%   Enables exploring how parameters effect the end result of the source
+%   separation process.
 
 % params
 if isempty(params)

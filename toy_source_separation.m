@@ -55,9 +55,6 @@ x = m * s_noisy;
 x_noisy = add_noise(x, output_noise, output_noise_type);
 
 %% unmix
-%[m_hat, s_hat] = unmix_als(x_noisy);
-%[m_hat, s_hat] = unmix_nnmf_sparse(x_noisy, get_waveform(waveform, sps));
-%[m_hat, s_hat] = unmix(x_noisy, get_waveform(waveform, sps));
 %[s_hat, m_hat, w_hat] = fastica(x_noisy, 'g', 'skew', 'numOfIC', size(fibers, 2));
 [s_hat, m_hat, w_hat] = unmix_nnica(x_noisy, get_waveform(waveform, sps));
 
@@ -139,5 +136,3 @@ h = findobj(gca, 'Type', 'line');
 % end
 xlim([0 20]);
 title('Separated signals');
-
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig7-signals.eps'); close;

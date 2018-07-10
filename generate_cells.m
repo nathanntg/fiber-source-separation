@@ -1,6 +1,7 @@
 function cells = generate_cells(varargin)
-%GENERATE_CELLS Summary of this function goes here
-%   Detailed explanation goes here
+%GENERATE_CELLS Generate neural population
+%   Given a volume, cell density and efficacy, generates uniformly
+%   distributed neruons throughout the region,
 
 % Size of the brain tissue volume being simulated
 % from Bottjer el al 1985

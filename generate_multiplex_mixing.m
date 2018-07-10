@@ -1,6 +1,7 @@
 function m = generate_multiplex_mixing(fibers, fiber_angles, cells, profile_exc, profile_fluor, mp_number, mp_all, varargin)
-%GENERATE_MULTIPLEX_MIXING Summary of this function goes here
-%   Detailed explanation goes here
+%GENERATE_MULTIPLEX_MIXING Multiplex mixing matrices
+%   Given structured illumination of a subset of the fibers, you will end
+%   up with distinct mixing matrices that may aid in signal reconstruction.
 
 %% DEFAULT PARAMETERS
 opt_fiber = [];

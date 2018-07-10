@@ -1,6 +1,8 @@
 function ret = generate_inputs(number, freq, mps, sps, duration, waveform, offset, amplitude)
-%GENERATE_INPUTS Summary of this function goes here
-%   Detailed explanation goes here
+%GENERATE_INPUTS Generate neural traces
+%   Given a waveform and a firing frequency, uses a bernoulli process to
+%   generate spiking activity and convolves it with the fluorescent
+%   waveform. Can optionally include random offsets and random amplitudes.
 
 % generate inputs in blocks to reduce memory usage
 block_size = 10000;

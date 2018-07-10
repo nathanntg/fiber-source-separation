@@ -1,6 +1,8 @@
 function [fibers, fiber_angles] = generate_fibers(num_fibers, varargin)
-%GENERATE_FIBERS Summary of this function goes here
-%   Detailed explanation goes here
+%GENERATE_FIBERS Generate fiber distribution
+%   Given a volume, center position and splay parameters (normal
+%   distribution standard deviation), generates a splayed bundle of fibers
+%   consistent with previously measured histology.
 
 % Size of the brain tissue volume being simulated
 % from Bottjer el al 1985

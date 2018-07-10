@@ -1,4 +1,9 @@
 function [S, M, W] = unmix_nnica(Y, waveform)
+%UNMIX_NNICA Use de-convolution and NN-ICA to perform source separation
+%   If the fluorescent waveform is provided, an deconvolution filter is
+%   first applied (as this can be applied to the already mixed signals) and
+%   then NN-ICA is used to whiten the data. Once complete, the signal is
+%   reconvolved with the waveform.
 
 unfilter = ~isempty(waveform);
 
