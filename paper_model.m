@@ -401,7 +401,120 @@ r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig6-fibers.ep
 close all;
 toy_source_separation;
 
-%% figure 8: auc
+%% figure 8: compare performance
+
+% two parameters to explore: firing rate, number of fibers
+
+iters = 3; % number of iterations per parameter set
+param_fiber_count = [100 250]; % 500];
+param_spike_frequency = [0.2 0.4 0.8];
+
+% iters = 1;
+% param_fiber_count = [100 250];
+% param_spike_frequency = 0.4;
+
+threshold = 0.6;
+
+% used cache results, since relatively slow
+if false || ~exist('state.mat', 'file')
+    results_mean = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
+    results_std = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
+
+    old_rng = rng; rng(0);
+    for i = 1:length(param_fiber_count)
+        for j = 1:length(param_spike_frequency)
+            fiber_count = param_fiber_count(i);
+            spike_frequency = param_spike_frequency(j);
+
+            fprintf('Simulating %d fibers with spike frequency of %.1f\n', fiber_count, spike_frequency);
+
+            values = zeros(iters, 3);
+
+            for k = 1:iters
+                % control
+                scores = simulate_source_separation('mode', 'profile-rt', ...
+                    'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+                    'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
+                    'output_noise', 0, 'g', 'control', 'params_cells', {'cell_density', 0.00025}, ...
+                    'figures', false);
+
+                values(k, 1) = sum(scores > threshold) ./ fiber_count;
+
+                % no source separation
+                scores = simulate_source_separation('mode', 'profile-rt', ...
+                    'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+                    'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
+                    'output_noise', 0, 'g', 'none', 'params_cells', {'cell_density', 0.00025}, ...
+                    'figures', false);
+
+                values(k, 2) = sum(scores > threshold) ./ fiber_count;
+
+                % regular source separation
+                scores = simulate_source_separation('mode', 'profile-rt', ...
+                    'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
+                    'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
+                    'output_noise', 0, 'g', 'nnica', 'params_cells', {'cell_density', 0.00025}, ...
+                    'figures', false);
+
+                values(k, 3) = sum(scores > threshold) ./ fiber_count;
+            end
+
+            % incremental logging of sorts
+            disp([i j]);
+            disp(values);
+
+            % average
+            mn = mean(values, 1);
+            st = std(values, 0, 1);
+
+            % store
+            idx = (i - 1) * length(param_spike_frequency) + j;
+            results_mean(idx, :) = mn;
+            results_std(idx, :) = st;
+        end
+    end
+    rng(old_rng);
+
+    % save the data, it's sloooooooooow
+    save('state.mat', '-v7.3', 'results_mean', 'results_std');
+else
+    load('state.mat');
+end
+
+% actual plotting
+figure;
+h = bar(results_mean);
+
+for i = 1:length(param_fiber_count)
+    fiber_count = param_fiber_count(i);
+    
+    idx_start = (i - 1) * length(param_spike_frequency) + 1;
+    idx_end = (i - 1) * length(param_spike_frequency) + length(param_spike_frequency);
+    
+    line([idx_start - 0.4 idx_end + 0.4], [1.11 1.11], 'Color', 'black', 'LineWidth', 1);
+    text((idx_start + idx_end) / 2, 1.11, sprintf('%d fibers', fiber_count), 'FontSize', 16, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
+    
+    for j = 1:length(param_spike_frequency)
+        spike_frequency = param_spike_frequency(j);
+        
+        idx = (i - 1) * length(param_spike_frequency) + j;
+        
+        line([idx - 0.4 idx + 0.4], [1.01 1.01], 'Color', 'black', 'LineWidth', 1);
+        text(idx, 1.01, sprintf('%.1f Hz', spike_frequency), 'FontSize', 16, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
+        
+        line([idx - 0.22 idx - 0.22], [results_mean(idx, 1) - results_std(idx, 1) / 2 results_mean(idx, 1) + results_std(idx, 1) / 2], 'Color', 'black', 'LineWidth', 1);
+        line([idx idx], [results_mean(idx, 2) - results_std(idx, 2) / 2 results_mean(idx, 2) + results_std(idx, 2) / 2], 'Color', 'black', 'LineWidth', 1);
+        line([idx + 0.22 idx + 0.22], [results_mean(idx, 3) - results_std(idx, 3) / 2 results_mean(idx, 3) + results_std(idx, 3) / 2], 'Color', 'black', 'LineWidth', 1);
+    end
+end
+
+xticks([]);
+ylabel('Accurately matched [%]'); ylim([0 1.2]); yticks([0 0.5 1.0]);
+legend('Control (random)', 'Control (raw)', 'NN-ICA', 'Location', 'SouthOutside', 'Orientation', 'horizontal');
+
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-robust.eps'); close;
+
+%% figure 9: auc
 % idea: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
 
 iters = 5; % number of iterations
@@ -477,7 +590,7 @@ legend(h, l, 'Location', 'SouthEast');
 xlabel('False Positive Rate'); xlim([0 1]); xticks([0 0.5 1.0]);
 ylabel('True Positive Rate'); ylim([0 1]); yticks([0 0.5 1.0]);
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-auc.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig9-auc.eps'); close;
 
 %% figure ?: auc control 1: compare with random traces
 

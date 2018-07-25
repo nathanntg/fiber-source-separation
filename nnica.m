@@ -4,7 +4,7 @@ function [Z, M, W] = nnica(Y)
 
 % number of dimensions to extract
 num_sig = size(Y, 1);
-max_iter = 100000;
+max_iter = 500000;
 tolerance = 1e-5;
 verbose = 'on';
 

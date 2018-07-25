@@ -198,6 +198,16 @@ elseif strcmp(g, 'none')
     s_hat = x_noisy;
     m_hat = eye(number_of_outputs);
     w_hat = eye(number_of_outputs);
+elseif strcmp(g, 'control')
+    % generate novel real data
+    s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform_v, offset, amplitude);
+    duration_smp = size(s, 2); % duration in readout samples
+    s_noisy = add_noise(s, input_noise, input_noise_type);
+    
+    % no unmixing
+    s_hat = x_noisy;
+    m_hat = eye(number_of_outputs);
+    w_hat = eye(number_of_outputs);
 else
     % perform ICA
     if figures
