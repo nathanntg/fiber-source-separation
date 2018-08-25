@@ -14,14 +14,15 @@ fiber_profile_emi = sp_model('sensitivity-profile/fiber-fluor.mat');
 fiber_profile_emi = sp_3d_to_2d(fiber_profile_emi); % symmetric, way faster
 
 %% figure 2: sensitivity profile
-h = figure('Renderer', 'painters');
+h = figure();
 h.Position = h.Position .* [1 1 3 1.1];
 
 % draw image
 subplot(1, 3, 1);
 photo = imread('/Users/nathan/Documents/School/BU/Gardner Lab/Fiber/Modeling Paper/profile/fitc.jpg');
 photo = permute(photo, [2 1 3]);
-image(photo);
+photo = rgb2gray(im2double(photo));
+imagesc(photo);
 axis xy; xlabel('z [µm]'); ylabel('x [µm]');
 xticks([]); yticks([]); axis square;
 
@@ -34,11 +35,12 @@ text(536.5, 960, '20 µm', 'FontSize', 22, 'HorizontalAlignment', 'center', 'Vert
 
 % profile in water
 detail_profile_exc_water = sp_model('sensitivity-profile/detail-exc-water.mat');
-detail_profile_exc_water = sp_3d_to_2d(detail_profile_exc_water);
+%detail_profile_exc_water = sp_3d_to_2d(detail_profile_exc_water);
 
 subplot(1, 3, 2);
-im = [detail_profile_exc_water.volume(end:-1:2, :); detail_profile_exc_water.volume];
-y = [-1 * detail_profile_exc_water.r(end:-1:2) detail_profile_exc_water.r];
+im = squeeze(sum(detail_profile_exc_water.volume, 2));
+im = im ./ max(im(:));
+y = detail_profile_exc_water.x;
 imagesc(detail_profile_exc_water.z, y, im, [0 1]);
 %title('Excitation profile');
 axis xy; xlabel('z [µm]'); ylabel('x [µm]');
@@ -48,11 +50,12 @@ colormap('jet'); caxis([0 1]);
 
 % profile in water
 detail_profile_exc = sp_model('sensitivity-profile/detail-exc.mat');
-detail_profile_exc = sp_3d_to_2d(detail_profile_exc);
+%detail_profile_exc = sp_3d_to_2d(detail_profile_exc);
 
 ax3 = subplot(1, 3, 3);
-im = [detail_profile_exc.volume(end:-1:2, :); detail_profile_exc.volume];
-y = [-1 * detail_profile_exc.r(end:-1:2) detail_profile_exc.r];
+im = squeeze(sum(detail_profile_exc.volume, 2));
+im = im ./ max(im(:));
+y = detail_profile_exc.x;
 imagesc(detail_profile_exc.z, y, im, [0 1]);
 %title('Excitation profile');
 axis xy; xlabel('z [µm]'); ylabel('x [µm]');
@@ -65,7 +68,7 @@ spp = get(ax3, 'Position');
 colorbar('Ticks', [0 0.5 1], ...
     'Position', [spp(1) + spp(3) + 0.02, spp(2), 0.01, spp(4)]);
 
-%r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig2-profile.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig2-profile.eps'); close;
 
 %% figure 3: fiber distribution
 
