@@ -248,6 +248,26 @@ rho = corr(s_noisy', s_hat');
 [scores, idx] = max(abs(rho), [], 2);
 
 % special mode for paper_model.m
+if strcmp(sss_mode, 'robust')
+    % score control - raw
+    rho = corr(s_noisy', x_noisy');
+    scores2 = max(abs(rho), [], 2);
+    
+    % score control - random
+    s = generate_inputs(number_of_inputs, spike_frequency, mps, sps, duration, waveform_v, offset, amplitude);
+    s_noisy = add_noise(s, input_noise, input_noise_type);
+    
+    rho = corr(s_noisy', x_noisy');
+    scores3 = max(abs(rho), [], 2);
+    
+    % combine results
+    threshold = 0.6;
+    scores = [sum(scores3 > threshold) sum(scores2 > threshold) sum(scores > threshold)];
+    
+    return;
+end
+
+% special mode for paper_model.m
 if strcmp(sss_mode, 'traces')
     % sort
     [~, sorted_in] = sort(scores);

@@ -408,7 +408,7 @@ toy_source_separation;
 
 % two parameters to explore: firing rate, number of fibers
 
-iters = 3; % number of iterations per parameter set
+iters = 5; % number of iterations per parameter set
 param_fiber_count = [100 250]; % 500];
 param_spike_frequency = [0.2 0.4 0.8];
 
@@ -422,6 +422,9 @@ threshold = 0.6;
 if false || ~exist('state.mat', 'file')
     results_mean = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
     results_std = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
+    results_sig = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
+    
+    pool = parpool('local', 3);
 
     old_rng = rng; rng(0);
     for i = 1:length(param_fiber_count)
@@ -433,33 +436,13 @@ if false || ~exist('state.mat', 'file')
 
             values = zeros(iters, 3);
 
-            for k = 1:iters
-                % control
-                scores = simulate_source_separation('mode', 'profile-rt', ...
-                    'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-                    'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
-                    'output_noise', 0, 'g', 'control', 'params_cells', {'cell_density', 0.00025}, ...
-                    'figures', false);
-
-                values(k, 1) = sum(scores > threshold) ./ fiber_count;
-
-                % no source separation
-                scores = simulate_source_separation('mode', 'profile-rt', ...
-                    'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
-                    'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
-                    'output_noise', 0, 'g', 'none', 'params_cells', {'cell_density', 0.00025}, ...
-                    'figures', false);
-
-                values(k, 2) = sum(scores > threshold) ./ fiber_count;
-
-                % regular source separation
-                scores = simulate_source_separation('mode', 'profile-rt', ...
+            parfor k = 1:iters
+                result = simulate_source_separation('mode', 'profile-rt', ...
                     'profile_exc', fiber_profile_exc, 'profile_fluor', fiber_profile_emi, ...
                     'duration', 200, 'number_of_outputs', fiber_count, 'spike_frequency', spike_frequency, ...
                     'output_noise', 0, 'g', 'nnica', 'params_cells', {'cell_density', 0.00025}, ...
-                    'figures', false);
-
-                values(k, 3) = sum(scores > threshold) ./ fiber_count;
+                    'figures', false, 'sss_mode', 'robust');
+                values(k, :) = result ./ fiber_count;
             end
 
             % incremental logging of sorts
@@ -474,12 +457,19 @@ if false || ~exist('state.mat', 'file')
             idx = (i - 1) * length(param_spike_frequency) + j;
             results_mean(idx, :) = mn;
             results_std(idx, :) = st;
+            
+            % test significance
+            [~, p] = ttest(values(:, 2), values(:, 3));
+            results_sig(idx, 1) = p;
+            disp(p);
         end
     end
     rng(old_rng);
+    
+    delete(pool);
 
     % save the data, it's sloooooooooow
-    save('state.mat', '-v7.3', 'results_mean', 'results_std');
+    save('state.mat', '-v7.3', 'results_mean', 'results_std', 'results_sig');
 else
     load('state.mat');
 end
