@@ -434,7 +434,7 @@ threshold = 0.6;
 if false || ~exist('state.mat', 'file')
     results_mean = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
     results_std = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
-    results_sig = zeros(length(param_spike_frequency) * length(param_fiber_count), 3);
+    results_sig = zeros(length(param_spike_frequency) * length(param_fiber_count), 1);
     
     pool = parpool('local', 3);
 
@@ -488,7 +488,7 @@ end
 
 % actual plotting
 figure;
-h = bar(results_mean);
+h = bar(results_mean(:, 2:3));
 
 for i = 1:length(param_fiber_count)
     fiber_count = param_fiber_count(i);
@@ -507,17 +507,21 @@ for i = 1:length(param_fiber_count)
         line([idx - 0.4 idx + 0.4], [1.01 1.01], 'Color', 'black', 'LineWidth', 1);
         text(idx, 1.01, sprintf('%.1f Hz', spike_frequency), 'FontSize', 16, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
         
-        line([idx - 0.22 idx - 0.22], [results_mean(idx, 1) - results_std(idx, 1) / 2 results_mean(idx, 1) + results_std(idx, 1) / 2], 'Color', 'black', 'LineWidth', 1);
-        line([idx idx], [results_mean(idx, 2) - results_std(idx, 2) / 2 results_mean(idx, 2) + results_std(idx, 2) / 2], 'Color', 'black', 'LineWidth', 1);
-        line([idx + 0.22 idx + 0.22], [results_mean(idx, 3) - results_std(idx, 3) / 2 results_mean(idx, 3) + results_std(idx, 3) / 2], 'Color', 'black', 'LineWidth', 1);
+        if results_sig(idx, 1) < 0.01
+            m = max(results_mean(idx, 2) + results_std(idx, 2) / 2, results_mean(idx, 3) + results_std(idx, 3) / 2);
+            text(idx, m, '*', 'FontSize', 40, 'Color', [0 0 0], 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+        end
+        
+        line([idx - 0.14 idx - 0.14], [results_mean(idx, 2) - results_std(idx, 2) / 2 results_mean(idx, 2) + results_std(idx, 2) / 2], 'Color', 'black', 'LineWidth', 1);
+        line([idx + 0.14 idx + 0.14], [results_mean(idx, 3) - results_std(idx, 3) / 2 results_mean(idx, 3) + results_std(idx, 3) / 2], 'Color', 'black', 'LineWidth', 1);
     end
 end
 
 xticks([]);
-ylabel('Accurately matched [%]'); ylim([0 1.2]); yticks([0 0.5 1.0]);
-legend('Control (random)', 'Control (raw)', 'NN-ICA', 'Location', 'SouthOutside', 'Orientation', 'horizontal');
+ylabel('Accurately matched [%]'); ylim([0 1.2]); yticks([0 0.5 1.0]); yticklabels({'0', '50', '100'});
+legend('Control (raw)', 'NN-ICA', 'Location', 'SouthOutside', 'Orientation', 'horizontal');
 
-r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-robust.eps'); close;
+r = get(gcf, 'renderer'); print(gcf, '-depsc2', ['-' r], '~/Local/fig8-compare.eps'); close;
 
 %% figure 9: auc
 % idea: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
