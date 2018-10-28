@@ -63,6 +63,18 @@ xlim([-20 65]); ylim([-42.5 42.5]); axis square;
 xticks([]); yticks([]);
 colormap('jet'); caxis([0 1]);
 
+% show contour
+light_out = 1.021427031; % uW out of the fiber.
+light_out_per_mm = light_out * 49.7359; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 8 µm / 2) ^ 2) in mW/mm^2"
+threshold = 2.5; % mW / mm^2
+
+% stim region
+region = squeeze(sum(detail_profile_exc.volume * light_out_per_mm  > threshold, 2));
+
+hold on;
+contour(detail_profile_exc.z, y, region, [0.5 0.5], ':w', 'LineWidth', 2);
+hold off;
+
 % colorbar position
 spp = get(ax3, 'Position');
 colorbar('Ticks', [0 0.5 1], ...
