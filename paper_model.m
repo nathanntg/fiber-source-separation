@@ -63,17 +63,29 @@ xlim([-20 65]); ylim([-42.5 42.5]); axis square;
 xticks([]); yticks([]);
 colormap('jet'); caxis([0 1]);
 
-% show contour
-light_out = 1.021427031; % uW out of the fiber.
-light_out_per_mm = light_out * 49.7359; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 8 µm / 2) ^ 2) in mW/mm^2"
+light_in = [1.25 2.5 5];
 threshold = 2.5; % mW / mm^2
+legend_h = zeros(1, length(light_in));
+colors = [1 1 1; 1 0.5 0; 1 0 0];
+legend_text = cell(1, length(light_in));
+for i = 1:length(light_in)
+    % show contour
+    light_out = light_in(i) * 0.419; % uW out of the fiber.
+    light_out_per_mm = light_out * 49.7359; % mW/mm^2; based on: "(1 µW) / (.4 * (? * 8 µm / 2) ^ 2) in mW/mm^2"
 
-% stim region
-region = squeeze(sum(detail_profile_exc.volume * light_out_per_mm  > threshold, 2));
-
-hold on;
-contour(detail_profile_exc.z, y, region, [0.5 0.5], ':w', 'LineWidth', 2);
-hold off;
+    % stim region
+    region = squeeze(sum(detail_profile_exc.volume * light_out_per_mm  > threshold, 2));
+    
+    hold on;
+    [~, h] = contour(detail_profile_exc.z, y, region, [0.5 0.5], ':', 'LineWidth', 2, 'LineColor', colors(i, :));
+    legend_h(i) = h;
+    hold off;
+    
+    % text
+    legend_text{i} = sprintf('\\color{white}%.01f µW', light_in(i));
+end
+legend(legend_h, legend_text{:}, 'Location', 'SouthWest', 'TextColor', [1 1 1]);
+legend('boxoff');
 
 % colorbar position
 spp = get(ax3, 'Position');
